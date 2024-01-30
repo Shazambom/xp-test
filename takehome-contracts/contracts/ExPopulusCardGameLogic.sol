@@ -15,6 +15,13 @@ contract ExPopulusCardGameLogic is Ownable {
 		uint8 health;
 		uint256 index;
 	}
+	struct Record {
+		uint256 wins;
+		uint256 losses;
+		uint256 draws;
+	}
+
+	mapping(address => Record) public records;
 
 	constructor(address _cards) Ownable() {
 		cards = IExPopulusCards(_cards);
@@ -36,53 +43,41 @@ contract ExPopulusCardGameLogic is Ownable {
 		validate(ids);
 		NftData[] memory playerDeck = getCards(ids);
 		NftData[] memory enemyDeck = getCards(cards.pickEnemyDeck());
-		State memory playerState = State(false, false, false, playerDeck[0], 0);
-		State memory enemyState = State(false, false, false, enemyDeck[0], 0);
+		State playerState = State(false, false, false, playerDeck[0], 0);
+		State enemyState = State(false, false, false, enemyDeck[0], 0);
 		//TODO: Clean this up if possible
-		while (pIdx < playerDeck.length && eIdx < enemyDeck.length) {
+		while (playerState.index < playerDeck.length && enemyState.index < enemyDeck.length) {
 			NftData playerCard = playerDeck[playerState.index];
 			NftData enemyCard = enemyDeck[enemyState.index];
 			//We check abilities here and apply them to the states in the order they were placed in priority
 			if (!playerState.abilityUsed && !enemyState.abilityUsed) {
 				playerState.abilityUsed = true;
 				enemyState.abilityUsed = true;
+				State first;
+				State second;
 				if (cards.checkAbility(playerCard.ability, enemyCard.ability)) {
-					bool pWon = false;
-					(playerState.shielded, pWon, enemyState.frozen) = processAbility(playerCard.ability);
-					if (pWon) {
-						eIdx = enemyDeck.length;
-						break;
-					}
-					bool eWon = false;
-					bool pShouldFreeze = false;
-					if (!enemyState.frozen) {
-						(enemyState.shielded, eWon, pShouldFreeze) = processAbility(enemyCard.ability);
-						if (eWon) {
-							pIdx = playerDeck.length;
-							break;
-						}
-						if (pShouldFreeze && !pSheilded) {
-							playerState.frozen = true;
-						}
-					}
+					first = playerState;
+					second = enemyState;
 				} else {
-					bool eWon = false;
-					(enemyState.shielded, eWon, playerState.frozen) = processAbility(enemyCard.ability);
-					if (eWon) {
-						pIdx = playerDeck.length;
+					first = enemyState;
+					second = playerState;
+				}
+				bool fWon = false;
+				bool sWon = false;
+				bool shouldFreeze = false;
+				(first.shielded, fWon, second.frozen) = processAbility(first.ability);
+				if (fWon) {
+					second.index = second.length;
+					break;
+				}
+				if (!second.frozen) {
+					(second.shielded, sWon, shouldFreeze) = processAbility(second.ability);
+					if (sWon) {
+						first.index = first.length;
 						break;
 					}
-					bool pWon = false;
-					bool eShouldFreeze = false;
-					if (!playerState.frozen) {
-						(playerState.shielded, pWon, eShouldFreeze) = processAbility(playerCard.ability);
-						if (pWon) {
-							eIdx = enemyDeck.length;
-							break;
-						}
-						if (eShouldFreeze && !enemyState.shielded) {
-							enemyState.frozen = true;
-						}
+					if (shouldFreeze && !first.shielded) {
+						first.frozen = true;
 					}
 				}
 			} else if (!playerState.abilityUsed) {
@@ -102,55 +97,76 @@ contract ExPopulusCardGameLogic is Ownable {
 					break;
 				}
 			}
-			//Now the state has been set up with the abilities applied now the battle can begin
+			//Now the state has been set up with the abilities applied now the combat portion of the turn can begin
 
-			//TODO: Apply the frozen and shielded states to this logic
-			if (playerState.health <= enemyCard.attack && enemyState.health <= playerCard.attack) {
-				pIdx++;
-				eIdx++;
-				if (pIdx == playerDeck.length || eIdx == enemyDeck.length) {
+			if (playerState.frozen || enemyState.shielded) {
+				if (!enemyState.frozen) {
+					if (playerState.health <= enemyCard.attack) {
+						playerState.index++;
+						if (pIdx == playerDeck.length) {
+							break;
+						}
+						playerState.health = playerDeck[pIdx].health;
+						playerState.abilityUsed = false;
+					} else {
+						playerState.health -= enemyCard.attack;
+					}
+				}
+			} else if (enemyState.frozen || playerState.shielded) {
+				//TODO: I don't think this state is actually reachable we can maybe remove this if check, validate with tests
+				if (!playerState.frozen) {
+					if (enemyState.health <= playerCard.attack) {
+						enemyState.index++;
+						if (eIdx == enemyDeck.length) {
+							break;
+						}
+						enemyState.health = enemyDeck[eIdx].health;
+						enemyState.abilityUsed = false;
+					} else {
+						enemyState.health -= playerCard.attack;
+					}
+				}
+			} else {
+				//It kinda looks weird but actually checking this state twice is cleaner than checking once while also
+				//ensuring the "attacks" occur simultaneously.
+				if (playerState.health <= enemyCard.attack) {
+					playerState.index++;
+				}
+				if (enemyState.health <= playerCard.attack) {
+					enemyState.index++;
+				}
+				if (playerState.index == playerDeck.length || enemyState.index == enemyDeck.length) {
 					break;
 				}
-				playerState.health = playerDeck[pIdx].health;
-				enemyState.health = enemyDeck[eIdx].health;
-				playerState.abilityUsed = false;
-				enemyState.abilityUsed = false;
-			} else {
 				if (playerState.health <= enemyCard.attack) {
-					pIdx++;
-					if (pIdx == playerDeck.length) {
-						break;
-					}
-					playerState.health = playerDeck[pIdx].health;
-					playerState.abilityUsed = false;
+					playerState.health = playerDeck[playerState.index].health;
 				} else {
 					playerState.health -= enemyCard.attack;
 				}
 				if (enemyState.health <= playerCard.attack) {
-					eIdx++;
-					if (eIdx == enemyDeck.length) {
-						break;
-					}
-					enemyState.health = enemyDeck[eIdx].health;
-					enemyState.abilityUsed = false;
+					enemyState.health = enemyDeck[enemyState.index].health;
 				} else {
 					enemyState.health -= playerCard.attack;
 				}
 			}
-
 			playerState.frozen = false;
 			playerState.shielded = false;
 			enemyState.frozen = false;
 			enemyState.shielded = false;
 		}
+		Record memory playerRecord = records[msg.sender];
 		uint8 result = 0;
-		if (pIdx == playerDeck.length && eIdx == enemyDeck.length) {
+		if (playerState.index == playerDeck.length && enemyState.index == enemyDeck.length) {
+			playerRecord.draws++;
 			result = 0;
-		} else if (pIdx == playerDeck.length) {
+		} else if (playerState.index == playerDeck.length) {
+			playerRecord.losses++;
 			result = 2;
 		} else {
+			playerRecord.wins++;
 			result = 1;
 		}
+		records[msg.sender] = playerRecord;
 		emit BattleResult(playerDeck, enemyDeck, result);
 		//TODO: assign rewards
 	}
@@ -197,5 +213,9 @@ contract ExPopulusCardGameLogic is Ownable {
 
 	function setCards(address _cards) external OnlyOwner() {
 		cards = IExPopulusCards(_cards);
+	}
+
+	function playerRecord(address player) external view returns (Record memory) {
+		return records[player];
 	}
 }
