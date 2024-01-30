@@ -21,17 +21,42 @@ contract ExPopulusCards {
 	);
 
 	NftData[] public nftData;
+	uint256[] public abilityPriority;
+	uint256 maxAbility;
 
 	constructor() {
 		_setupRole(DEFAULT_ADMIN_ROLE, msg.sender);
 		_setupRole(MINTER_ROLE, msg.sender);
+		maxAbility = 2;
 	}
 
-	function mintCard(address to, uint8 attack, uint8 health, uint8 ability) external onlyRole(MINTER_ROLE) {
+	modifier abilityCheck(uint256 ability) {
+		if (ability > maxAbility) {
+			revert("Ability must be less than the max ability");
+		}
+		_;
+	}
+
+	function updateMaxAbility(uint256 _maxAbility) external onlyRole(DEFAULT_ADMIN_ROLE) {
+		maxAbility = _maxAbility;
+	}
+
+	function mintCard(address to, uint8 attack, uint8 health, uint8 ability) external onlyRole(MINTER_ROLE) abilityCheck(ability) {
 		uint256 id = nftData.length;
 		_mint(to, id);
 		nftData.push(NftData(attack, health, ability));
 		emit Mint(to, id, nftData[id]);
+	}
+
+	function setAbilityPriority(uint256 ability, uint256 priority) external onlyRole(MINTER_ROLE) abilityCheck(ability) {
+		for (uint256 i = 0; i < abilityPriority.length; i++) {
+			//TODO: For now I don't like this, loops are notoriously bad in solidity
+			// I will live with it because it will work but there has got to be a better way.
+			if (abilityPriority[i] == priority) {
+				revert("Priority already exists");
+			}
+		}
+		abilityPriority[ability] = priority;
 	}
 
 	function cardDetails(uint256 _id) public view returns (string memory) {
