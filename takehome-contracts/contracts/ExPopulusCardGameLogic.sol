@@ -1,13 +1,15 @@
-pragma solidity ^0.8.12;
+// SPDX-License-Identifier: MIT
+pragma solidity ^0.8.20;
 
 
 import "./ExPopulusCards.sol";
+import "./ExPopulusToken.sol";
 import "@openzeppelin/contracts/access/Ownable.sol";
-import "./structs.sol";
 
 contract ExPopulusCardGameLogic is Ownable {
 
 	IExPopulusCards public cards;
+	ExPopulusToken public token;
 	struct State {
 		bool abilityUsed;
 		bool frozen;
@@ -23,14 +25,21 @@ contract ExPopulusCardGameLogic is Ownable {
 
 	mapping(address => Record) public records;
 
-	constructor(address _cards) Ownable() {
+	constructor(address _cards, address _token) Ownable() {
 		cards = IExPopulusCards(_cards);
+		token = ExPopulusToken(_token);
 	}
+	struct CardData {
+		uint8 attack;
+		uint8 health;
+		uint8 ability;
+	}
+
 
 	event BattleResult(
 	// 0 - draw, 1 - win, 2 - lose
-		NftData[3] playerDeck,
-		NftData[3] enemyDeck,
+		CardData[3] playerDeck,
+		CardData[3] enemyDeck,
 		uint8 result
 	);
 
@@ -41,14 +50,14 @@ contract ExPopulusCardGameLogic is Ownable {
 
 	function battle(uint256[3] calldata ids) external onlyWallets() {
 		validate(ids);
-		NftData[] memory playerDeck = getCards(ids);
-		NftData[] memory enemyDeck = getCards(cards.pickEnemyDeck());
+		CardData[] memory playerDeck = getCards(ids);
+		CardData[] memory enemyDeck = getCards(cards.pickEnemyDeck());
 		State playerState = State(false, false, false, playerDeck[0], 0);
 		State enemyState = State(false, false, false, enemyDeck[0], 0);
 		//TODO: Clean this up if possible
 		while (playerState.index < playerDeck.length && enemyState.index < enemyDeck.length) {
-			NftData playerCard = playerDeck[playerState.index];
-			NftData enemyCard = enemyDeck[enemyState.index];
+			CardData playerCard = playerDeck[playerState.index];
+			CardData enemyCard = enemyDeck[enemyState.index];
 			//We check abilities here and apply them to the states in the order they were placed in priority
 			if (!playerState.abilityUsed && !enemyState.abilityUsed) {
 				playerState.abilityUsed = true;
@@ -168,7 +177,17 @@ contract ExPopulusCardGameLogic is Ownable {
 		}
 		records[msg.sender] = playerRecord;
 		emit BattleResult(playerDeck, enemyDeck, result);
-		//TODO: assign rewards
+		grantRewards(playerRecord.wins, result);
+	}
+
+	function grantRewards(uint256 wins, uint256 result) internal {
+		if (result == 1) {
+			uint256 amount = 100;
+			if (wins % 5 == 0) {
+				amount = 1000;
+			}
+			token.mintToken(msg.sender, amount);
+		}
 	}
 
 	function processAbility(uint8 ability) internal pure returns (bool, bool, bool) {
@@ -186,14 +205,17 @@ contract ExPopulusCardGameLogic is Ownable {
 	}
 
 	function rand(uint256 _modulus) internal view returns (uint256) {
+		//Again a better random function is probably needed for production but this will do
 		return uint256(keccak256(abi.encodePacked(block.timestamp, block.difficulty, msg.sender, tx.origin))) % _modulus;
 	}
 
-	function getCards(uint256[3] calldata ids) external returns (NftData[] memory) {
-		NftData[] memory deck;
+	function getCards(uint256[3] calldata ids) external returns (CardData[] memory) {
+		CardData[] memory deck;
 		for (uint256 i = 0; i < 3; i++) {
 			if (ids[i] != 0) {
-				deck.push(cards.cardDetails(ids[i]));
+				CardData data;
+				(data.attack, data.health, data.ability) = cards.cardDetails(ids[i]);
+				deck.push(data);
 			}
 		}
 		return deck;
@@ -211,11 +233,11 @@ contract ExPopulusCardGameLogic is Ownable {
 		}
 	}
 
-	function setCards(address _cards) external OnlyOwner() {
+	function setCards(address _cards) external onlyOwner() {
 		cards = IExPopulusCards(_cards);
 	}
 
-	function playerRecord(address player) external view returns (Record memory) {
-		return records[player];
+	function setToken(address _token) external onlyOwner() {
+		token = ExPopulusToken(_token);
 	}
 }

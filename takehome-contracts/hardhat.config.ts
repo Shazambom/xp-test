@@ -38,6 +38,15 @@ export const config: HardhatUserConfig & any = {
       {version: "0.8.9", settings: {}},
       {version: "0.8.0", settings: {}},
       {version: "0.6.2", settings: {}},
+      {
+        version: "0.8.20",
+        settings: {
+          optimizer: {
+            enabled: true,
+            runs: 1000
+          }
+        }
+      },
     ],
     settings: {
       metadata: {

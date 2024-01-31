@@ -1,20 +1,25 @@
-pragma solidity ^0.8.12;
+// SPDX-License-Identifier: MIT
+pragma solidity ^0.8.20;
 
 import "@openzeppelin/contracts/token/ERC721/ERC721.sol";
 import "@openzeppelin/contracts/access/AccessControl.sol";
 import "@openzeppelin/contracts/access/Ownable.sol";
-import "./structs.sol";
 
 interface IExPopulusCards is ERC721 {
-	function cardDetails(uint256 _id) external view returns (NftData memory);
+	function cardDetails(uint256 _id) external view returns (uint8, uint8, uint8);
 	function pickEnemyDeck() public view returns (uint256[] memory);
 	function checkAbility(uint256 alpha, uint256 beta) public view returns (bool);
 }
 
 
-contract ExPopulusCards is ERC721, AccessConrol, Ownable, IExPopulusCards {
+contract ExPopulusCards is ERC721, AccessControl, Ownable, IExPopulusCards {
 	bytes32 public constant MINTER_ROLE = keccak256("MINTER_ROLE");
 
+	struct NftData {
+		uint8 attack;
+		uint8 health;
+		uint8 ability;
+	}
 
 	event Mint(
 		address to,
@@ -28,8 +33,8 @@ contract ExPopulusCards is ERC721, AccessConrol, Ownable, IExPopulusCards {
 	uint256 maxAbility;
 
 	constructor() {
-		_setupRole(DEFAULT_ADMIN_ROLE, msg.sender);
-		_setupRole(MINTER_ROLE, msg.sender);
+		grantRole(DEFAULT_ADMIN_ROLE, msg.sender);
+		grantRole(MINTER_ROLE, msg.sender);
 		maxAbility = 2;
 		//This isn't guaranteed to actually have priorities for each ability
 		//abilityPriority = [2, 0, 1];
@@ -75,11 +80,12 @@ contract ExPopulusCards is ERC721, AccessConrol, Ownable, IExPopulusCards {
 		abilityPriority[ability] = _priority;
 	}
 
-	function cardDetails(uint256 _id) public view returns (NftData memory) {
+	function cardDetails(uint256 _id) public view returns (uint8, uint8, uint8) {
 		if (_id >= nftData.length) {
 			return "";
 		}
-		return nftData[_id];
+		NftData memory card = nftData[_id];
+		return (card.attack, card.health, card.ability);
 	}
 
 	function pickEnemyDeck() public view returns (uint256[] memory) {
@@ -106,7 +112,7 @@ contract ExPopulusCards is ERC721, AccessConrol, Ownable, IExPopulusCards {
 	function supportsInterface(bytes4 interfaceId)
 	public
 	view
-	override(ERC1155, AccessControl, IERC165)
+	override(ERC721, AccessControl, IERC165)
 	returns (bool)
 	{
 		return super.supportsInterface(interfaceId);

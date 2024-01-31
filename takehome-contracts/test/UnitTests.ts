@@ -20,11 +20,15 @@ describe("Unit tests", function () {
 
 		// Deploy the contracts
 		this.contracts = await deployContracts();
+
+		await this.contracts.exPopulusToken.connect(this.signers.creator).grantMinterRole(this.contracts.exPopulusCardGameLogic.address);
 	});
 
 	describe("User Story #1 (Minting)", async function () {
 		it("Can mint a card to a specific player & verify ownership afterwards", async function () {
-			// const res = await this.contracts.exPopulusToken.connect(this.signers.creator).mintToken();
+			const res = await this.contracts.exPopulusCards.connect(this.signers.creator).mintCard(this.signers.testAccount2.address, 1, 1, 1);
+			const ownsCard = await this.contracts.exPopulusCards.connect(this.signers.testAccount2).tokenOwner(1);
+			console.log(ownsCard);
 		});
 	});
 
@@ -35,6 +39,7 @@ describe("Unit tests", function () {
 	});
 
 	describe("User Story #4 (Fungible Token & Battle Rewards)", async function () {
+		const res = await this.contracts.exPopulusToken.connect(this.signers.creator).mintToken(this.signers.creator.address, 100);
 	});
 
 	describe("User Story #5 (Battle Logs & Historical Lookup)", async function () {

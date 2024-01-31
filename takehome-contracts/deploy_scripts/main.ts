@@ -18,9 +18,11 @@ export async function deployContracts(): Promise<IDeployContractsOutput> {
 	const exPopulusCardsContract = await ethers.deployContract("ExPopulusCards", creator);
 	await exPopulusCardsContract.deployed();
 
-	const exPopulusCardGameLogicContract = await ethers.deployContract("ExPopulusCardGameLogic", creator);
-	await exPopulusCardGameLogicContract.deployed();
+	const cardsAddress = await exPopulusCardsContract.getAddress();
+	const tokenAddress = await exPopulusTokenContract.getAddress();
 
+	const exPopulusCardGameLogicContract = await ethers.deployContract("ExPopulusCardGameLogic", creator, cardsAddress, tokenAddress);
+	await exPopulusCardGameLogicContract.deployed();
 	return {
 		exPopulusToken: exPopulusTokenContract as ExPopulusToken,
 		exPopulusCards: exPopulusCardsContract as ExPopulusCards,
