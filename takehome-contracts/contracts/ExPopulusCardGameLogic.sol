@@ -11,10 +11,11 @@ contract ExPopulusCardGameLogic is Ownable {
 	ExPopulusCards public cards;
 	ExPopulusToken public token;
 	struct State {
-		//Theoretically this could be packed into a uint256 where the first 8-16 bits could be bools for certain states
-		// the next 5 bytes could be the health, ability, attack, index, and length. This would still leave 25-26 bytes for
-		// future expansion. This would be a gas optimization but would make the code less readable. I left it this way
-		// for now for readability.
+		//Theoretically this could be packed into a bytes where the first 8-16 bits could be bools for certain states
+		// the next 5 bytes could be the health, ability, attack, index, and length. This would still leave some bytes for
+		// future expansion (This is dependent on the abi.encode and abi.decode functions that have the length encoded as well).
+		// Unfortunately the implementation of this with the commented out code works but adds roughly 3million gas to the
+		// battle function. Due to the encoding of the state struct. According
 		bool abilityUsed;
 		bool frozen;
 		bool shielded;
@@ -29,6 +30,20 @@ contract ExPopulusCardGameLogic is Ownable {
 		State playerState;
 		State enemyState;
 	}
+
+	/*
+	//Stored in the contract
+	struct Turn {
+		bytes playerState;
+		bytes enemyState;
+	}
+
+	//Returned to the client
+	struct ClientTurn {
+		State playerState;
+		State enemyState;
+	}
+	*/
 
 	struct Record {
 		uint256 wins;
@@ -136,10 +151,7 @@ contract ExPopulusCardGameLogic is Ownable {
 						playerTurns.push(Turn(playerState, enemyState));
 						break;
 					}
-					playerState.health = playerDeck[playerState.index].health;
-					playerState.ability = playerDeck[playerState.index].ability;
-					playerState.attack = playerDeck[playerState.index].attack;
-					playerState.abilityUsed = false;
+					setNextCard(playerState, playerDeck[playerState.index]);
 				} else {
 					playerState.health -= enemyState.attack;
 				}
@@ -150,10 +162,7 @@ contract ExPopulusCardGameLogic is Ownable {
 						playerTurns.push(Turn(playerState, enemyState));
 						break;
 					}
-					enemyState.health = enemyDeck[enemyState.index].health;
-					enemyState.ability = enemyDeck[enemyState.index].ability;
-					enemyState.attack = enemyDeck[enemyState.index].attack;
-					enemyState.abilityUsed = false;
+					setNextCard(enemyState, enemyDeck[enemyState.index]);
 				} else {
 					enemyState.health -= playerState.attack;
 				}
@@ -171,27 +180,19 @@ contract ExPopulusCardGameLogic is Ownable {
 					break;
 				}
 				if (playerState.health <= enemyState.attack) {
-					playerState.health = playerDeck[playerState.index].health;
-					playerState.ability = playerDeck[playerState.index].ability;
-					playerState.attack = playerDeck[playerState.index].attack;
-					playerState.abilityUsed = false;
+					setNextCard(playerState, playerDeck[playerState.index]);
 				} else {
 					playerState.health -= enemyState.attack;
 				}
 				if (enemyState.health <= playerState.attack) {
-					enemyState.health = enemyDeck[enemyState.index].health;
-					enemyState.ability = enemyDeck[enemyState.index].ability;
-					enemyState.attack = enemyDeck[enemyState.index].attack;
-					enemyState.abilityUsed = false;
+					setNextCard(enemyState, enemyDeck[enemyState.index]);
 				} else {
 					enemyState.health -= playerState.attack;
 				}
 			}
 			playerTurns.push(Turn(playerState, enemyState));
-			playerState.frozen = false;
-			playerState.shielded = false;
-			enemyState.frozen = false;
-			enemyState.shielded = false;
+			resetStatus(playerState);
+			resetStatus(enemyState);
 		}
 		Record memory playerRecord = records[msg.sender];
 		uint8 result = 0;
@@ -220,6 +221,18 @@ contract ExPopulusCardGameLogic is Ownable {
 			}
 			token.mintToken(msg.sender, amount);
 		}
+	}
+
+	function resetStatus(State memory state) internal pure {
+		state.frozen = false;
+		state.shielded = false;
+	}
+
+	function setNextCard(State memory state, CardData memory data) internal pure {
+		state.health = data.health;
+		state.ability = data.ability;
+		state.attack = data.attack;
+		state.abilityUsed = false;
 	}
 
 	function processAbility(uint8 ability) internal view returns (bool, bool, bool) {
@@ -255,6 +268,16 @@ contract ExPopulusCardGameLogic is Ownable {
 		return deck;
 	}
 
+	/*
+	function getGameTurns(uint256 gameHash) external view returns (ClientTurn[] memory) {
+		Turn[] memory turns = gameTurns[gameHash];
+		ClientTurn[] memory clientTurns = new ClientTurn[](turns.length);
+		for (uint256 i = 0; i < turns.length; i++) {
+			clientTurns[i] = ClientTurn(decodeState(turns[i].playerState), decodeState(turns[i].enemyState));
+		}
+		return clientTurns;
+	}
+	*/
 	function getGameTurns(uint256 gameHash) external view returns (Turn[] memory) {
 		return gameTurns[gameHash];
 	}
@@ -278,4 +301,20 @@ contract ExPopulusCardGameLogic is Ownable {
 	function setToken(address _token) external onlyOwner() {
 		token = ExPopulusToken(_token);
 	}
+
+	/*
+	function encodeState(State memory state) public pure returns (bytes memory) {
+		return abi.encode(state.abilityUsed, state.frozen, state.shielded, state.health, state.ability, state.attack, state.index, state.length);
+	}
+
+	function decodeState(bytes memory data) public pure returns (State memory) {
+		State memory state;
+		(state.abilityUsed, state.frozen, state.shielded, state.health, state.ability, state.attack, state.index, state.length) = abi.decode(data, (bool, bool, bool, uint8, uint8, uint8, uint8, uint8));
+		return state;
+	}
+
+	function getTurn(State memory playerState, State memory enemyState) public pure returns (Turn memory) {
+		return Turn(encodeState(playerState), encodeState(enemyState));
+	}
+	*/
 }
