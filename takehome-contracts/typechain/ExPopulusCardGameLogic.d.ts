@@ -345,10 +345,11 @@ export class ExPopulusCardGameLogic extends BaseContract {
       arg0: string,
       overrides?: CallOverrides
     ): Promise<
-      [BigNumber, BigNumber, BigNumber] & {
+      [BigNumber, BigNumber, BigNumber, BigNumber] & {
         wins: BigNumber;
         losses: BigNumber;
         draws: BigNumber;
+        streak: BigNumber;
       }
     >;
 
@@ -527,10 +528,11 @@ export class ExPopulusCardGameLogic extends BaseContract {
     arg0: string,
     overrides?: CallOverrides
   ): Promise<
-    [BigNumber, BigNumber, BigNumber] & {
+    [BigNumber, BigNumber, BigNumber, BigNumber] & {
       wins: BigNumber;
       losses: BigNumber;
       draws: BigNumber;
+      streak: BigNumber;
     }
   >;
 
@@ -709,10 +711,11 @@ export class ExPopulusCardGameLogic extends BaseContract {
       arg0: string,
       overrides?: CallOverrides
     ): Promise<
-      [BigNumber, BigNumber, BigNumber] & {
+      [BigNumber, BigNumber, BigNumber, BigNumber] & {
         wins: BigNumber;
         losses: BigNumber;
         draws: BigNumber;
+        streak: BigNumber;
       }
     >;
 

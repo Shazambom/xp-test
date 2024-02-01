@@ -34,6 +34,7 @@ contract ExPopulusCardGameLogic is Ownable {
 		uint256 wins;
 		uint256 losses;
 		uint256 draws;
+		uint256 streak;
 	}
 
 	struct CardData {
@@ -201,9 +202,11 @@ contract ExPopulusCardGameLogic is Ownable {
 			result = 0;
 		} else if (playerState.index == playerDeck.length) {
 			playerRecord.losses++;
+			playerRecord.streak = 0;
 			result = 2;
 		} else {
 			playerRecord.wins++;
+			playerRecord.streak++;
 			result = 1;
 		}
 		records[msg.sender] = playerRecord;
