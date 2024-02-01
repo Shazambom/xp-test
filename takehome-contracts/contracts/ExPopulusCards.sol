@@ -84,7 +84,7 @@ contract ExPopulusCards is ERC721, AccessControl {
 		uint256[3] memory enemyDeck;
 		for (uint256 i = 0; i < 3; i++) {
 			//RNG should be replaced with a more secure method but this will do for now
-			enemyDeck[i] = (uint256(keccak256(abi.encodePacked(block.timestamp, block.prevrandao, msg.sender, tx.origin))) % (nftData.length-1))+1;
+			enemyDeck[i] = (uint256(keccak256(abi.encodePacked(block.timestamp, block.prevrandao, msg.sender, tx.origin, i))) % (nftData.length-1))+1;
 		}
 		return enemyDeck;
 	}

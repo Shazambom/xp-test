@@ -258,11 +258,11 @@ describe("Unit tests", function () {
 			await expect(res2).to.be.fulfilled;
 			const res3 = this.contracts.exPopulusCards.connect(this.signers.creator).setAbilityPriority(2, 20);
 			await expect(res3).to.be.fulfilled;
-			const mintRes = this.contracts.exPopulusCards.connect(this.signers.creator).mintCard(this.signers.testAccount2.address, 1, 1, 0);
+			const mintRes = this.contracts.exPopulusCards.connect(this.signers.creator).mintCard(this.signers.testAccount2.address, 3, 10, 2);
 			await expect(mintRes).to.be.fulfilled;
-			const mintRes2 = this.contracts.exPopulusCards.connect(this.signers.creator).mintCard(this.signers.testAccount2.address, 1, 1, 0);
+			const mintRes2 = this.contracts.exPopulusCards.connect(this.signers.creator).mintCard(this.signers.testAccount2.address, 10, 1, 0);
 			await expect(mintRes2).to.be.fulfilled;
-			const mintRes3 = this.contracts.exPopulusCards.connect(this.signers.creator).mintCard(this.signers.testAccount2.address, 1, 1, 0);
+			const mintRes3 = this.contracts.exPopulusCards.connect(this.signers.creator).mintCard(this.signers.testAccount2.address, 2, 4, 1);
 			await expect(mintRes3).to.be.fulfilled;
 			const battleRes = this.contracts.exPopulusCardGameLogic.connect(this.signers.testAccount2).battle([1, 2, 3]);
 			await expect(battleRes).to.be.fulfilled;
@@ -276,6 +276,7 @@ describe("Unit tests", function () {
 			}
 			expect(battleResult.args["player"]).to.equal(this.signers.testAccount2.address);
 			const record = await this.contracts.exPopulusCardGameLogic.connect(this.signers.testAccount2).getGameTurns(battleResult.args["gameHash"]);
+			console.log(battleResult.args);
 			console.log(record);
 		});
 	});
