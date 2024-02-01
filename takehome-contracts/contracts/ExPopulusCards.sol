@@ -24,11 +24,13 @@ contract ExPopulusCards is ERC721, AccessControl {
 	uint256 maxAbility;
 
 	constructor() ERC721("ExPopulusCards", "EPC") AccessControl() {
-		grantRole(DEFAULT_ADMIN_ROLE, msg.sender);
-		grantRole(MINTER_ROLE, msg.sender);
+		_grantRole(DEFAULT_ADMIN_ROLE, msg.sender);
+		_grantRole(MINTER_ROLE, msg.sender);
+		//This is the default for now but ideally this would be set up to be configurable along with the abilityPriority
+		// list. The list would grow with the changes to maxAbility. However, for now, this is fine.
 		maxAbility = 2;
 		//This isn't guaranteed to actually have priorities for each ability
-		//abilityPriority = [2, 0, 1];
+		abilityPriority = [0, 0, 0];
 
 		// this is a hack to make the first card id 1 but we could just add 1 to each id when we use it
 		// this is likely more gas efficient but I don't know for sure
@@ -60,7 +62,7 @@ contract ExPopulusCards is ERC721, AccessControl {
 		}
 		//add 1 to the priority because 0 is the null case
 		uint256 _priority = priority+1;
-		for (uint256 i = 0; i < abilityPriority.length; i++) {
+		for (uint256 i = 0; i <= maxAbility; i++) {
 			//TODO: For now I don't like this, loops are notoriously bad in solidity
 			// I will live with it because it will work but there has got to be a better way.
 			if (abilityPriority[i] == _priority) {

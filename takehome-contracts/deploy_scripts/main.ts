@@ -9,23 +9,24 @@ export interface IDeployContractsOutput {
 }
 
 export async function deployContracts(): Promise<IDeployContractsOutput> {
+	console.log("Deploying contracts...");
 
 	const creator = (await ethers.getSigners())[0];
 
-	const exPopulusTokenContract = await ethers.deployContract("ExPopulusToken", creator);
-	await exPopulusTokenContract.deployed();
 
-	const exPopulusCardsContract = await ethers.deployContract("ExPopulusCards", creator);
-	await exPopulusCardsContract.deployed();
+	const exPopulusTokenFactory = await ethers.getContractFactory("ExPopulusToken", creator);
+	const exPopulusTokenContract = await exPopulusTokenFactory.deploy();
+	console.log("Token address: ", exPopulusTokenContract.address);
 
-	const cardsAddress = await exPopulusCardsContract.getAddress();
-	const tokenAddress = await exPopulusTokenContract.getAddress();
+	const exPopulusCardsFactory = await ethers.getContractFactory("ExPopulusCards", creator);
+	const exPopulusCardsContract = await exPopulusCardsFactory.deploy();
+	console.log("Cards address: ", exPopulusCardsContract.address);
 
-	const exPopulusCardGameLogicContract = await ethers.deployContract("ExPopulusCardGameLogic", creator, cardsAddress, tokenAddress);
-	await exPopulusCardGameLogicContract.deployed();
+	const exPopulusCardGameLogicFactory = await ethers.getContractFactory("ExPopulusCardGameLogic", creator);
+	const exPopulusCardGameLogic = await exPopulusCardGameLogicFactory.deploy(exPopulusCardsContract.address, exPopulusTokenContract.address);
 	return {
 		exPopulusToken: exPopulusTokenContract as ExPopulusToken,
 		exPopulusCards: exPopulusCardsContract as ExPopulusCards,
-		exPopulusCardGameLogic: exPopulusCardGameLogicContract as ExPopulusCardGameLogic,
+		exPopulusCardGameLogic: exPopulusCardGameLogic as ExPopulusCardGameLogic,
 	};
 }
