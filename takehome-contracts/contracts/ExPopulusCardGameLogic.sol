@@ -211,7 +211,6 @@ contract ExPopulusCardGameLogic is Ownable {
 		}
 		records[msg.sender] = playerRecord;
 		grantRewards(playerRecord.wins, result);
-		gameTurns[gameHash] = playerTurns;
 		emit BattleResult(msg.sender, gameHash, playerDeck, enemyDeck, result);
 	}
 
