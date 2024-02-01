@@ -175,6 +175,12 @@ describe("Unit tests", function () {
 	});
 
 	describe("User Story #4 (Fungible Token & Battle Rewards)", async function () {
+		it("Only those with minter role can mint tokens", async function () {
+			const res = this.contracts.exPopulusToken.connect(this.signers.testAccount2).mintToken(this.signers.testAccount2.address, 100);
+			await expect(res).to.be.rejectedWith("revert");
+			const res2 = this.contracts.exPopulusToken.connect(this.signers.creator).mintToken(this.signers.testAccount2.address, 100);
+			await expect(res2).to.be.fulfilled;
+		});
 		it("Can mint tokens to a specific player & verify balance afterwards", async function () {
 			const res = await this.contracts.exPopulusToken.connect(this.signers.creator).mintToken(this.signers.testAccount3.address, 100);
 			const balance = await this.contracts.exPopulusToken.connect(this.signers.testAccount3).balanceOf(this.signers.testAccount3.address);
