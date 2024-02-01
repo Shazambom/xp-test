@@ -23,6 +23,8 @@ interface ExPopulusCardGameLogicInterface extends ethers.utils.Interface {
   functions: {
     "battle(uint256[3])": FunctionFragment;
     "cards()": FunctionFragment;
+    "gameTurns(uint256,uint256)": FunctionFragment;
+    "getGameTurns(uint256)": FunctionFragment;
     "owner()": FunctionFragment;
     "records(address)": FunctionFragment;
     "renounceOwnership()": FunctionFragment;
@@ -38,6 +40,14 @@ interface ExPopulusCardGameLogicInterface extends ethers.utils.Interface {
     values: [[BigNumberish, BigNumberish, BigNumberish]]
   ): string;
   encodeFunctionData(functionFragment: "cards", values?: undefined): string;
+  encodeFunctionData(
+    functionFragment: "gameTurns",
+    values: [BigNumberish, BigNumberish]
+  ): string;
+  encodeFunctionData(
+    functionFragment: "getGameTurns",
+    values: [BigNumberish]
+  ): string;
   encodeFunctionData(functionFragment: "owner", values?: undefined): string;
   encodeFunctionData(functionFragment: "records", values: [string]): string;
   encodeFunctionData(
@@ -58,6 +68,11 @@ interface ExPopulusCardGameLogicInterface extends ethers.utils.Interface {
 
   decodeFunctionResult(functionFragment: "battle", data: BytesLike): Result;
   decodeFunctionResult(functionFragment: "cards", data: BytesLike): Result;
+  decodeFunctionResult(functionFragment: "gameTurns", data: BytesLike): Result;
+  decodeFunctionResult(
+    functionFragment: "getGameTurns",
+    data: BytesLike
+  ): Result;
   decodeFunctionResult(functionFragment: "owner", data: BytesLike): Result;
   decodeFunctionResult(functionFragment: "records", data: BytesLike): Result;
   decodeFunctionResult(
@@ -74,7 +89,7 @@ interface ExPopulusCardGameLogicInterface extends ethers.utils.Interface {
   decodeFunctionResult(functionFragment: "validate", data: BytesLike): Result;
 
   events: {
-    "BattleResult(tuple[3],tuple[3],uint8)": EventFragment;
+    "BattleResult(address,uint256,uint8)": EventFragment;
     "OwnershipTransferred(address,address)": EventFragment;
   };
 
@@ -83,77 +98,9 @@ interface ExPopulusCardGameLogicInterface extends ethers.utils.Interface {
 }
 
 export type BattleResultEvent = TypedEvent<
-  [
-    [
-      [number, number, number] & {
-        attack: number;
-        health: number;
-        ability: number;
-      },
-      [number, number, number] & {
-        attack: number;
-        health: number;
-        ability: number;
-      },
-      [number, number, number] & {
-        attack: number;
-        health: number;
-        ability: number;
-      }
-    ],
-    [
-      [number, number, number] & {
-        attack: number;
-        health: number;
-        ability: number;
-      },
-      [number, number, number] & {
-        attack: number;
-        health: number;
-        ability: number;
-      },
-      [number, number, number] & {
-        attack: number;
-        health: number;
-        ability: number;
-      }
-    ],
-    number
-  ] & {
-    playerDeck: [
-      [number, number, number] & {
-        attack: number;
-        health: number;
-        ability: number;
-      },
-      [number, number, number] & {
-        attack: number;
-        health: number;
-        ability: number;
-      },
-      [number, number, number] & {
-        attack: number;
-        health: number;
-        ability: number;
-      }
-    ];
-    enemyDeck: [
-      [number, number, number] & {
-        attack: number;
-        health: number;
-        ability: number;
-      },
-      [number, number, number] & {
-        attack: number;
-        health: number;
-        ability: number;
-      },
-      [number, number, number] & {
-        attack: number;
-        health: number;
-        ability: number;
-      }
-    ];
+  [string, BigNumber, number] & {
+    player: string;
+    gameHash: BigNumber;
     result: number;
   }
 >;
@@ -213,6 +160,179 @@ export class ExPopulusCardGameLogic extends BaseContract {
 
     cards(overrides?: CallOverrides): Promise<[string]>;
 
+    gameTurns(
+      arg0: BigNumberish,
+      arg1: BigNumberish,
+      overrides?: CallOverrides
+    ): Promise<
+      [
+        [
+          boolean,
+          boolean,
+          boolean,
+          number,
+          number,
+          number,
+          BigNumber,
+          number
+        ] & {
+          abilityUsed: boolean;
+          frozen: boolean;
+          shielded: boolean;
+          health: number;
+          ability: number;
+          attack: number;
+          index: BigNumber;
+          length: number;
+        },
+        [
+          boolean,
+          boolean,
+          boolean,
+          number,
+          number,
+          number,
+          BigNumber,
+          number
+        ] & {
+          abilityUsed: boolean;
+          frozen: boolean;
+          shielded: boolean;
+          health: number;
+          ability: number;
+          attack: number;
+          index: BigNumber;
+          length: number;
+        }
+      ] & {
+        playerState: [
+          boolean,
+          boolean,
+          boolean,
+          number,
+          number,
+          number,
+          BigNumber,
+          number
+        ] & {
+          abilityUsed: boolean;
+          frozen: boolean;
+          shielded: boolean;
+          health: number;
+          ability: number;
+          attack: number;
+          index: BigNumber;
+          length: number;
+        };
+        enemyState: [
+          boolean,
+          boolean,
+          boolean,
+          number,
+          number,
+          number,
+          BigNumber,
+          number
+        ] & {
+          abilityUsed: boolean;
+          frozen: boolean;
+          shielded: boolean;
+          health: number;
+          ability: number;
+          attack: number;
+          index: BigNumber;
+          length: number;
+        };
+      }
+    >;
+
+    getGameTurns(
+      gameHash: BigNumberish,
+      overrides?: CallOverrides
+    ): Promise<
+      [
+        ([
+          [
+            boolean,
+            boolean,
+            boolean,
+            number,
+            number,
+            number,
+            BigNumber,
+            number
+          ] & {
+            abilityUsed: boolean;
+            frozen: boolean;
+            shielded: boolean;
+            health: number;
+            ability: number;
+            attack: number;
+            index: BigNumber;
+            length: number;
+          },
+          [
+            boolean,
+            boolean,
+            boolean,
+            number,
+            number,
+            number,
+            BigNumber,
+            number
+          ] & {
+            abilityUsed: boolean;
+            frozen: boolean;
+            shielded: boolean;
+            health: number;
+            ability: number;
+            attack: number;
+            index: BigNumber;
+            length: number;
+          }
+        ] & {
+          playerState: [
+            boolean,
+            boolean,
+            boolean,
+            number,
+            number,
+            number,
+            BigNumber,
+            number
+          ] & {
+            abilityUsed: boolean;
+            frozen: boolean;
+            shielded: boolean;
+            health: number;
+            ability: number;
+            attack: number;
+            index: BigNumber;
+            length: number;
+          };
+          enemyState: [
+            boolean,
+            boolean,
+            boolean,
+            number,
+            number,
+            number,
+            BigNumber,
+            number
+          ] & {
+            abilityUsed: boolean;
+            frozen: boolean;
+            shielded: boolean;
+            health: number;
+            ability: number;
+            attack: number;
+            index: BigNumber;
+            length: number;
+          };
+        })[]
+      ]
+    >;
+
     owner(overrides?: CallOverrides): Promise<[string]>;
 
     records(
@@ -259,6 +379,141 @@ export class ExPopulusCardGameLogic extends BaseContract {
   ): Promise<ContractTransaction>;
 
   cards(overrides?: CallOverrides): Promise<string>;
+
+  gameTurns(
+    arg0: BigNumberish,
+    arg1: BigNumberish,
+    overrides?: CallOverrides
+  ): Promise<
+    [
+      [boolean, boolean, boolean, number, number, number, BigNumber, number] & {
+        abilityUsed: boolean;
+        frozen: boolean;
+        shielded: boolean;
+        health: number;
+        ability: number;
+        attack: number;
+        index: BigNumber;
+        length: number;
+      },
+      [boolean, boolean, boolean, number, number, number, BigNumber, number] & {
+        abilityUsed: boolean;
+        frozen: boolean;
+        shielded: boolean;
+        health: number;
+        ability: number;
+        attack: number;
+        index: BigNumber;
+        length: number;
+      }
+    ] & {
+      playerState: [
+        boolean,
+        boolean,
+        boolean,
+        number,
+        number,
+        number,
+        BigNumber,
+        number
+      ] & {
+        abilityUsed: boolean;
+        frozen: boolean;
+        shielded: boolean;
+        health: number;
+        ability: number;
+        attack: number;
+        index: BigNumber;
+        length: number;
+      };
+      enemyState: [
+        boolean,
+        boolean,
+        boolean,
+        number,
+        number,
+        number,
+        BigNumber,
+        number
+      ] & {
+        abilityUsed: boolean;
+        frozen: boolean;
+        shielded: boolean;
+        health: number;
+        ability: number;
+        attack: number;
+        index: BigNumber;
+        length: number;
+      };
+    }
+  >;
+
+  getGameTurns(
+    gameHash: BigNumberish,
+    overrides?: CallOverrides
+  ): Promise<
+    ([
+      [boolean, boolean, boolean, number, number, number, BigNumber, number] & {
+        abilityUsed: boolean;
+        frozen: boolean;
+        shielded: boolean;
+        health: number;
+        ability: number;
+        attack: number;
+        index: BigNumber;
+        length: number;
+      },
+      [boolean, boolean, boolean, number, number, number, BigNumber, number] & {
+        abilityUsed: boolean;
+        frozen: boolean;
+        shielded: boolean;
+        health: number;
+        ability: number;
+        attack: number;
+        index: BigNumber;
+        length: number;
+      }
+    ] & {
+      playerState: [
+        boolean,
+        boolean,
+        boolean,
+        number,
+        number,
+        number,
+        BigNumber,
+        number
+      ] & {
+        abilityUsed: boolean;
+        frozen: boolean;
+        shielded: boolean;
+        health: number;
+        ability: number;
+        attack: number;
+        index: BigNumber;
+        length: number;
+      };
+      enemyState: [
+        boolean,
+        boolean,
+        boolean,
+        number,
+        number,
+        number,
+        BigNumber,
+        number
+      ] & {
+        abilityUsed: boolean;
+        frozen: boolean;
+        shielded: boolean;
+        health: number;
+        ability: number;
+        attack: number;
+        index: BigNumber;
+        length: number;
+      };
+    })[]
+  >;
 
   owner(overrides?: CallOverrides): Promise<string>;
 
@@ -307,6 +562,177 @@ export class ExPopulusCardGameLogic extends BaseContract {
 
     cards(overrides?: CallOverrides): Promise<string>;
 
+    gameTurns(
+      arg0: BigNumberish,
+      arg1: BigNumberish,
+      overrides?: CallOverrides
+    ): Promise<
+      [
+        [
+          boolean,
+          boolean,
+          boolean,
+          number,
+          number,
+          number,
+          BigNumber,
+          number
+        ] & {
+          abilityUsed: boolean;
+          frozen: boolean;
+          shielded: boolean;
+          health: number;
+          ability: number;
+          attack: number;
+          index: BigNumber;
+          length: number;
+        },
+        [
+          boolean,
+          boolean,
+          boolean,
+          number,
+          number,
+          number,
+          BigNumber,
+          number
+        ] & {
+          abilityUsed: boolean;
+          frozen: boolean;
+          shielded: boolean;
+          health: number;
+          ability: number;
+          attack: number;
+          index: BigNumber;
+          length: number;
+        }
+      ] & {
+        playerState: [
+          boolean,
+          boolean,
+          boolean,
+          number,
+          number,
+          number,
+          BigNumber,
+          number
+        ] & {
+          abilityUsed: boolean;
+          frozen: boolean;
+          shielded: boolean;
+          health: number;
+          ability: number;
+          attack: number;
+          index: BigNumber;
+          length: number;
+        };
+        enemyState: [
+          boolean,
+          boolean,
+          boolean,
+          number,
+          number,
+          number,
+          BigNumber,
+          number
+        ] & {
+          abilityUsed: boolean;
+          frozen: boolean;
+          shielded: boolean;
+          health: number;
+          ability: number;
+          attack: number;
+          index: BigNumber;
+          length: number;
+        };
+      }
+    >;
+
+    getGameTurns(
+      gameHash: BigNumberish,
+      overrides?: CallOverrides
+    ): Promise<
+      ([
+        [
+          boolean,
+          boolean,
+          boolean,
+          number,
+          number,
+          number,
+          BigNumber,
+          number
+        ] & {
+          abilityUsed: boolean;
+          frozen: boolean;
+          shielded: boolean;
+          health: number;
+          ability: number;
+          attack: number;
+          index: BigNumber;
+          length: number;
+        },
+        [
+          boolean,
+          boolean,
+          boolean,
+          number,
+          number,
+          number,
+          BigNumber,
+          number
+        ] & {
+          abilityUsed: boolean;
+          frozen: boolean;
+          shielded: boolean;
+          health: number;
+          ability: number;
+          attack: number;
+          index: BigNumber;
+          length: number;
+        }
+      ] & {
+        playerState: [
+          boolean,
+          boolean,
+          boolean,
+          number,
+          number,
+          number,
+          BigNumber,
+          number
+        ] & {
+          abilityUsed: boolean;
+          frozen: boolean;
+          shielded: boolean;
+          health: number;
+          ability: number;
+          attack: number;
+          index: BigNumber;
+          length: number;
+        };
+        enemyState: [
+          boolean,
+          boolean,
+          boolean,
+          number,
+          number,
+          number,
+          BigNumber,
+          number
+        ] & {
+          abilityUsed: boolean;
+          frozen: boolean;
+          shielded: boolean;
+          health: number;
+          ability: number;
+          attack: number;
+          index: BigNumber;
+          length: number;
+        };
+      })[]
+    >;
+
     owner(overrides?: CallOverrides): Promise<string>;
 
     records(
@@ -340,166 +766,22 @@ export class ExPopulusCardGameLogic extends BaseContract {
   };
 
   filters: {
-    "BattleResult(tuple[3],tuple[3],uint8)"(
-      playerDeck?: null,
-      enemyDeck?: null,
+    "BattleResult(address,uint256,uint8)"(
+      player?: null,
+      gameHash?: null,
       result?: null
     ): TypedEventFilter<
-      [
-        [
-          [number, number, number] & {
-            attack: number;
-            health: number;
-            ability: number;
-          },
-          [number, number, number] & {
-            attack: number;
-            health: number;
-            ability: number;
-          },
-          [number, number, number] & {
-            attack: number;
-            health: number;
-            ability: number;
-          }
-        ],
-        [
-          [number, number, number] & {
-            attack: number;
-            health: number;
-            ability: number;
-          },
-          [number, number, number] & {
-            attack: number;
-            health: number;
-            ability: number;
-          },
-          [number, number, number] & {
-            attack: number;
-            health: number;
-            ability: number;
-          }
-        ],
-        number
-      ],
-      {
-        playerDeck: [
-          [number, number, number] & {
-            attack: number;
-            health: number;
-            ability: number;
-          },
-          [number, number, number] & {
-            attack: number;
-            health: number;
-            ability: number;
-          },
-          [number, number, number] & {
-            attack: number;
-            health: number;
-            ability: number;
-          }
-        ];
-        enemyDeck: [
-          [number, number, number] & {
-            attack: number;
-            health: number;
-            ability: number;
-          },
-          [number, number, number] & {
-            attack: number;
-            health: number;
-            ability: number;
-          },
-          [number, number, number] & {
-            attack: number;
-            health: number;
-            ability: number;
-          }
-        ];
-        result: number;
-      }
+      [string, BigNumber, number],
+      { player: string; gameHash: BigNumber; result: number }
     >;
 
     BattleResult(
-      playerDeck?: null,
-      enemyDeck?: null,
+      player?: null,
+      gameHash?: null,
       result?: null
     ): TypedEventFilter<
-      [
-        [
-          [number, number, number] & {
-            attack: number;
-            health: number;
-            ability: number;
-          },
-          [number, number, number] & {
-            attack: number;
-            health: number;
-            ability: number;
-          },
-          [number, number, number] & {
-            attack: number;
-            health: number;
-            ability: number;
-          }
-        ],
-        [
-          [number, number, number] & {
-            attack: number;
-            health: number;
-            ability: number;
-          },
-          [number, number, number] & {
-            attack: number;
-            health: number;
-            ability: number;
-          },
-          [number, number, number] & {
-            attack: number;
-            health: number;
-            ability: number;
-          }
-        ],
-        number
-      ],
-      {
-        playerDeck: [
-          [number, number, number] & {
-            attack: number;
-            health: number;
-            ability: number;
-          },
-          [number, number, number] & {
-            attack: number;
-            health: number;
-            ability: number;
-          },
-          [number, number, number] & {
-            attack: number;
-            health: number;
-            ability: number;
-          }
-        ];
-        enemyDeck: [
-          [number, number, number] & {
-            attack: number;
-            health: number;
-            ability: number;
-          },
-          [number, number, number] & {
-            attack: number;
-            health: number;
-            ability: number;
-          },
-          [number, number, number] & {
-            attack: number;
-            health: number;
-            ability: number;
-          }
-        ];
-        result: number;
-      }
+      [string, BigNumber, number],
+      { player: string; gameHash: BigNumber; result: number }
     >;
 
     "OwnershipTransferred(address,address)"(
@@ -526,6 +808,17 @@ export class ExPopulusCardGameLogic extends BaseContract {
     ): Promise<BigNumber>;
 
     cards(overrides?: CallOverrides): Promise<BigNumber>;
+
+    gameTurns(
+      arg0: BigNumberish,
+      arg1: BigNumberish,
+      overrides?: CallOverrides
+    ): Promise<BigNumber>;
+
+    getGameTurns(
+      gameHash: BigNumberish,
+      overrides?: CallOverrides
+    ): Promise<BigNumber>;
 
     owner(overrides?: CallOverrides): Promise<BigNumber>;
 
@@ -565,6 +858,17 @@ export class ExPopulusCardGameLogic extends BaseContract {
     ): Promise<PopulatedTransaction>;
 
     cards(overrides?: CallOverrides): Promise<PopulatedTransaction>;
+
+    gameTurns(
+      arg0: BigNumberish,
+      arg1: BigNumberish,
+      overrides?: CallOverrides
+    ): Promise<PopulatedTransaction>;
+
+    getGameTurns(
+      gameHash: BigNumberish,
+      overrides?: CallOverrides
+    ): Promise<PopulatedTransaction>;
 
     owner(overrides?: CallOverrides): Promise<PopulatedTransaction>;
 
