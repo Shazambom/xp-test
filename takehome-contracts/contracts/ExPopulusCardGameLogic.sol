@@ -76,7 +76,6 @@ contract ExPopulusCardGameLogic is Ownable {
 		State memory enemyState = State(false, false, false, enemyDeck[0].health, enemyDeck[0].ability, enemyDeck[0].attack, 0, uint8(enemyDeck.length));
 		State memory first;
 		State memory second;
-		uint256 i = 0;
 		while (playerState.index < playerDeck.length && enemyState.index < enemyDeck.length) {
 			//We check abilities here and apply them to the states in the order they were placed in priority
 			if (!playerState.abilityUsed && !enemyState.abilityUsed) {
@@ -193,7 +192,6 @@ contract ExPopulusCardGameLogic is Ownable {
 			playerState.shielded = false;
 			enemyState.frozen = false;
 			enemyState.shielded = false;
-			i++;
 		}
 		Record memory playerRecord = records[msg.sender];
 		uint8 result = 0;
