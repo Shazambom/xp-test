@@ -7,10 +7,14 @@ import "./ExPopulusToken.sol";
 import "@openzeppelin/contracts/access/Ownable.sol";
 
 contract ExPopulusCardGameLogic is Ownable {
-
+	uint256 MAX_INT = 2**256 - 1;
 	ExPopulusCards public cards;
 	ExPopulusToken public token;
 	struct State {
+		//Theoretically this could be packed into a uint256 where the first 8-16 bits could be bools for certain states
+		// the next 5 bytes could be the health, ability, attack, index, and length. This would still leave 25-26 bytes for
+		// future expansion. This would be a gas optimization but would make the code less readable. I left it this way
+		// for now for readability.
 		bool abilityUsed;
 		bool frozen;
 		bool shielded;
@@ -32,19 +36,11 @@ contract ExPopulusCardGameLogic is Ownable {
 		uint256 draws;
 	}
 
-	mapping(address => Record) public records;
-	mapping(uint256 => Turn[]) public gameTurns;
-
-	constructor(address _cards, address _token) Ownable(msg.sender) {
-		cards = ExPopulusCards(_cards);
-		token = ExPopulusToken(_token);
-	}
 	struct CardData {
 		uint8 attack;
 		uint8 health;
 		uint8 ability;
 	}
-
 
 	event BattleResult(
 	// 0 - draw, 1 - win, 2 - lose
@@ -55,13 +51,21 @@ contract ExPopulusCardGameLogic is Ownable {
 		uint8 result
 	);
 
+	mapping(address => Record) public records;
+	mapping(uint256 => Turn[]) public gameTurns;
+
+	constructor(address _cards, address _token) Ownable(msg.sender) {
+		cards = ExPopulusCards(_cards);
+		token = ExPopulusToken(_token);
+	}
+
 	modifier onlyWallets() {
 		require(tx.origin == msg.sender, "only wallets");
 		_;
 	}
 
 	function battle(uint256[3] memory ids) external onlyWallets() {
-		uint256 gameHash = uint256(keccak256(abi.encodePacked(block.timestamp, block.prevrandao, msg.sender, tx.origin)));
+		uint256 gameHash = rand(MAX_INT);
 		validate(ids);
 		Turn[] storage playerTurns = gameTurns[gameHash];
 
@@ -69,7 +73,6 @@ contract ExPopulusCardGameLogic is Ownable {
 		CardData[] memory enemyDeck = getCards(cards.pickEnemyDeck());
 		State memory playerState = State(false, false, false, playerDeck[0].health, playerDeck[0].ability, playerDeck[0].attack, 0, uint8(playerDeck.length));
 		State memory enemyState = State(false, false, false, enemyDeck[0].health, enemyDeck[0].ability, enemyDeck[0].attack, 0, uint8(enemyDeck.length));
-		//TODO: Clean this up if possible
 		State memory first;
 		State memory second;
 		uint256 i = 0;
@@ -123,35 +126,30 @@ contract ExPopulusCardGameLogic is Ownable {
 			//Now the state has been set up with the abilities applied now the combat portion of the turn can begin
 
 			if (playerState.frozen || enemyState.shielded) {
-				if (!enemyState.frozen) {
-					if (playerState.health <= enemyState.attack) {
-						playerState.index++;
-						if (playerState.index == playerDeck.length) {
-							break;
-						}
-						playerState.health = playerDeck[playerState.index].health;
-						playerState.ability = playerDeck[playerState.index].ability;
-						playerState.attack = playerDeck[playerState.index].attack;
-						playerState.abilityUsed = false;
-					} else {
-						playerState.health -= enemyState.attack;
+				if (playerState.health <= enemyState.attack) {
+					playerState.index++;
+					if (playerState.index == playerDeck.length) {
+						break;
 					}
+					playerState.health = playerDeck[playerState.index].health;
+					playerState.ability = playerDeck[playerState.index].ability;
+					playerState.attack = playerDeck[playerState.index].attack;
+					playerState.abilityUsed = false;
+				} else {
+					playerState.health -= enemyState.attack;
 				}
 			} else if (enemyState.frozen || playerState.shielded) {
-				//TODO: I don't think this state is actually reachable we can maybe remove this if check, validate with tests
-				if (!playerState.frozen) {
-					if (enemyState.health <= playerState.attack) {
-						enemyState.index++;
-						if (enemyState.index == enemyState.length) {
-							break;
-						}
-						enemyState.health = enemyDeck[enemyState.index].health;
-						enemyState.ability = enemyDeck[enemyState.index].ability;
-						enemyState.attack = enemyDeck[enemyState.index].attack;
-						enemyState.abilityUsed = false;
-					} else {
-						enemyState.health -= playerState.attack;
+				if (enemyState.health <= playerState.attack) {
+					enemyState.index++;
+					if (enemyState.index == enemyState.length) {
+						break;
 					}
+					enemyState.health = enemyDeck[enemyState.index].health;
+					enemyState.ability = enemyDeck[enemyState.index].ability;
+					enemyState.attack = enemyDeck[enemyState.index].attack;
+					enemyState.abilityUsed = false;
+				} else {
+					enemyState.health -= playerState.attack;
 				}
 			} else {
 				//It kinda looks weird but actually checking this state twice is cleaner than checking once while also

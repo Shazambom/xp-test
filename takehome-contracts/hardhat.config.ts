@@ -58,7 +58,7 @@ export const config: HardhatUserConfig & any = {
       // https://hardhat.org/hardhat-network/#solidity-optimizer-support
       optimizer: {
         enabled: true,
-        runs: 1, // https://docs.soliditylang.org/en/v0.8.9/internals/optimizer.html#optimizer-parameter-runs
+        runs: 1000, // https://docs.soliditylang.org/en/v0.8.9/internals/optimizer.html#optimizer-parameter-runs
       },
     },
   },
