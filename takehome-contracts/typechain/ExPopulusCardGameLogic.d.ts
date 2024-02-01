@@ -23,8 +23,11 @@ interface ExPopulusCardGameLogicInterface extends ethers.utils.Interface {
   functions: {
     "battle(uint256[3])": FunctionFragment;
     "cards()": FunctionFragment;
+    "decodeState(uint256)": FunctionFragment;
+    "encodeState((bool,bool,bool,uint8,uint8,uint8,uint8,uint8))": FunctionFragment;
     "gameTurns(uint256,uint256)": FunctionFragment;
     "getGameTurns(uint256)": FunctionFragment;
+    "getTurn((bool,bool,bool,uint8,uint8,uint8,uint8,uint8),(bool,bool,bool,uint8,uint8,uint8,uint8,uint8))": FunctionFragment;
     "owner()": FunctionFragment;
     "records(address)": FunctionFragment;
     "renounceOwnership()": FunctionFragment;
@@ -41,12 +44,56 @@ interface ExPopulusCardGameLogicInterface extends ethers.utils.Interface {
   ): string;
   encodeFunctionData(functionFragment: "cards", values?: undefined): string;
   encodeFunctionData(
+    functionFragment: "decodeState",
+    values: [BigNumberish]
+  ): string;
+  encodeFunctionData(
+    functionFragment: "encodeState",
+    values: [
+      {
+        abilityUsed: boolean;
+        frozen: boolean;
+        shielded: boolean;
+        health: BigNumberish;
+        ability: BigNumberish;
+        attack: BigNumberish;
+        index: BigNumberish;
+        length: BigNumberish;
+      }
+    ]
+  ): string;
+  encodeFunctionData(
     functionFragment: "gameTurns",
     values: [BigNumberish, BigNumberish]
   ): string;
   encodeFunctionData(
     functionFragment: "getGameTurns",
     values: [BigNumberish]
+  ): string;
+  encodeFunctionData(
+    functionFragment: "getTurn",
+    values: [
+      {
+        abilityUsed: boolean;
+        frozen: boolean;
+        shielded: boolean;
+        health: BigNumberish;
+        ability: BigNumberish;
+        attack: BigNumberish;
+        index: BigNumberish;
+        length: BigNumberish;
+      },
+      {
+        abilityUsed: boolean;
+        frozen: boolean;
+        shielded: boolean;
+        health: BigNumberish;
+        ability: BigNumberish;
+        attack: BigNumberish;
+        index: BigNumberish;
+        length: BigNumberish;
+      }
+    ]
   ): string;
   encodeFunctionData(functionFragment: "owner", values?: undefined): string;
   encodeFunctionData(functionFragment: "records", values: [string]): string;
@@ -68,11 +115,20 @@ interface ExPopulusCardGameLogicInterface extends ethers.utils.Interface {
 
   decodeFunctionResult(functionFragment: "battle", data: BytesLike): Result;
   decodeFunctionResult(functionFragment: "cards", data: BytesLike): Result;
+  decodeFunctionResult(
+    functionFragment: "decodeState",
+    data: BytesLike
+  ): Result;
+  decodeFunctionResult(
+    functionFragment: "encodeState",
+    data: BytesLike
+  ): Result;
   decodeFunctionResult(functionFragment: "gameTurns", data: BytesLike): Result;
   decodeFunctionResult(
     functionFragment: "getGameTurns",
     data: BytesLike
   ): Result;
+  decodeFunctionResult(functionFragment: "getTurn", data: BytesLike): Result;
   decodeFunctionResult(functionFragment: "owner", data: BytesLike): Result;
   decodeFunctionResult(functionFragment: "records", data: BytesLike): Result;
   decodeFunctionResult(
@@ -184,9 +240,8 @@ export class ExPopulusCardGameLogic extends BaseContract {
 
     cards(overrides?: CallOverrides): Promise<[string]>;
 
-    gameTurns(
-      arg0: BigNumberish,
-      arg1: BigNumberish,
+    decodeState(
+      data: BigNumberish,
       overrides?: CallOverrides
     ): Promise<
       [
@@ -199,58 +254,29 @@ export class ExPopulusCardGameLogic extends BaseContract {
           attack: number;
           index: number;
           length: number;
-        },
-        [boolean, boolean, boolean, number, number, number, number, number] & {
-          abilityUsed: boolean;
-          frozen: boolean;
-          shielded: boolean;
-          health: number;
-          ability: number;
-          attack: number;
-          index: number;
-          length: number;
         }
-      ] & {
-        playerState: [
-          boolean,
-          boolean,
-          boolean,
-          number,
-          number,
-          number,
-          number,
-          number
-        ] & {
-          abilityUsed: boolean;
-          frozen: boolean;
-          shielded: boolean;
-          health: number;
-          ability: number;
-          attack: number;
-          index: number;
-          length: number;
-        };
-        enemyState: [
-          boolean,
-          boolean,
-          boolean,
-          number,
-          number,
-          number,
-          number,
-          number
-        ] & {
-          abilityUsed: boolean;
-          frozen: boolean;
-          shielded: boolean;
-          health: number;
-          ability: number;
-          attack: number;
-          index: number;
-          length: number;
-        };
-      }
+      ]
     >;
+
+    encodeState(
+      state: {
+        abilityUsed: boolean;
+        frozen: boolean;
+        shielded: boolean;
+        health: BigNumberish;
+        ability: BigNumberish;
+        attack: BigNumberish;
+        index: BigNumberish;
+        length: BigNumberish;
+      },
+      overrides?: CallOverrides
+    ): Promise<[BigNumber]>;
+
+    gameTurns(
+      arg0: BigNumberish,
+      arg1: BigNumberish,
+      overrides?: CallOverrides
+    ): Promise<[BigNumber]>;
 
     getGameTurns(
       gameHash: BigNumberish,
@@ -339,6 +365,30 @@ export class ExPopulusCardGameLogic extends BaseContract {
       ]
     >;
 
+    getTurn(
+      playerState: {
+        abilityUsed: boolean;
+        frozen: boolean;
+        shielded: boolean;
+        health: BigNumberish;
+        ability: BigNumberish;
+        attack: BigNumberish;
+        index: BigNumberish;
+        length: BigNumberish;
+      },
+      enemyState: {
+        abilityUsed: boolean;
+        frozen: boolean;
+        shielded: boolean;
+        health: BigNumberish;
+        ability: BigNumberish;
+        attack: BigNumberish;
+        index: BigNumberish;
+        length: BigNumberish;
+      },
+      overrides?: CallOverrides
+    ): Promise<[BigNumber]>;
+
     owner(overrides?: CallOverrides): Promise<[string]>;
 
     records(
@@ -387,73 +437,41 @@ export class ExPopulusCardGameLogic extends BaseContract {
 
   cards(overrides?: CallOverrides): Promise<string>;
 
+  decodeState(
+    data: BigNumberish,
+    overrides?: CallOverrides
+  ): Promise<
+    [boolean, boolean, boolean, number, number, number, number, number] & {
+      abilityUsed: boolean;
+      frozen: boolean;
+      shielded: boolean;
+      health: number;
+      ability: number;
+      attack: number;
+      index: number;
+      length: number;
+    }
+  >;
+
+  encodeState(
+    state: {
+      abilityUsed: boolean;
+      frozen: boolean;
+      shielded: boolean;
+      health: BigNumberish;
+      ability: BigNumberish;
+      attack: BigNumberish;
+      index: BigNumberish;
+      length: BigNumberish;
+    },
+    overrides?: CallOverrides
+  ): Promise<BigNumber>;
+
   gameTurns(
     arg0: BigNumberish,
     arg1: BigNumberish,
     overrides?: CallOverrides
-  ): Promise<
-    [
-      [boolean, boolean, boolean, number, number, number, number, number] & {
-        abilityUsed: boolean;
-        frozen: boolean;
-        shielded: boolean;
-        health: number;
-        ability: number;
-        attack: number;
-        index: number;
-        length: number;
-      },
-      [boolean, boolean, boolean, number, number, number, number, number] & {
-        abilityUsed: boolean;
-        frozen: boolean;
-        shielded: boolean;
-        health: number;
-        ability: number;
-        attack: number;
-        index: number;
-        length: number;
-      }
-    ] & {
-      playerState: [
-        boolean,
-        boolean,
-        boolean,
-        number,
-        number,
-        number,
-        number,
-        number
-      ] & {
-        abilityUsed: boolean;
-        frozen: boolean;
-        shielded: boolean;
-        health: number;
-        ability: number;
-        attack: number;
-        index: number;
-        length: number;
-      };
-      enemyState: [
-        boolean,
-        boolean,
-        boolean,
-        number,
-        number,
-        number,
-        number,
-        number
-      ] & {
-        abilityUsed: boolean;
-        frozen: boolean;
-        shielded: boolean;
-        health: number;
-        ability: number;
-        attack: number;
-        index: number;
-        length: number;
-      };
-    }
-  >;
+  ): Promise<BigNumber>;
 
   getGameTurns(
     gameHash: BigNumberish,
@@ -522,6 +540,30 @@ export class ExPopulusCardGameLogic extends BaseContract {
     })[]
   >;
 
+  getTurn(
+    playerState: {
+      abilityUsed: boolean;
+      frozen: boolean;
+      shielded: boolean;
+      health: BigNumberish;
+      ability: BigNumberish;
+      attack: BigNumberish;
+      index: BigNumberish;
+      length: BigNumberish;
+    },
+    enemyState: {
+      abilityUsed: boolean;
+      frozen: boolean;
+      shielded: boolean;
+      health: BigNumberish;
+      ability: BigNumberish;
+      attack: BigNumberish;
+      index: BigNumberish;
+      length: BigNumberish;
+    },
+    overrides?: CallOverrides
+  ): Promise<BigNumber>;
+
   owner(overrides?: CallOverrides): Promise<string>;
 
   records(
@@ -570,73 +612,41 @@ export class ExPopulusCardGameLogic extends BaseContract {
 
     cards(overrides?: CallOverrides): Promise<string>;
 
+    decodeState(
+      data: BigNumberish,
+      overrides?: CallOverrides
+    ): Promise<
+      [boolean, boolean, boolean, number, number, number, number, number] & {
+        abilityUsed: boolean;
+        frozen: boolean;
+        shielded: boolean;
+        health: number;
+        ability: number;
+        attack: number;
+        index: number;
+        length: number;
+      }
+    >;
+
+    encodeState(
+      state: {
+        abilityUsed: boolean;
+        frozen: boolean;
+        shielded: boolean;
+        health: BigNumberish;
+        ability: BigNumberish;
+        attack: BigNumberish;
+        index: BigNumberish;
+        length: BigNumberish;
+      },
+      overrides?: CallOverrides
+    ): Promise<BigNumber>;
+
     gameTurns(
       arg0: BigNumberish,
       arg1: BigNumberish,
       overrides?: CallOverrides
-    ): Promise<
-      [
-        [boolean, boolean, boolean, number, number, number, number, number] & {
-          abilityUsed: boolean;
-          frozen: boolean;
-          shielded: boolean;
-          health: number;
-          ability: number;
-          attack: number;
-          index: number;
-          length: number;
-        },
-        [boolean, boolean, boolean, number, number, number, number, number] & {
-          abilityUsed: boolean;
-          frozen: boolean;
-          shielded: boolean;
-          health: number;
-          ability: number;
-          attack: number;
-          index: number;
-          length: number;
-        }
-      ] & {
-        playerState: [
-          boolean,
-          boolean,
-          boolean,
-          number,
-          number,
-          number,
-          number,
-          number
-        ] & {
-          abilityUsed: boolean;
-          frozen: boolean;
-          shielded: boolean;
-          health: number;
-          ability: number;
-          attack: number;
-          index: number;
-          length: number;
-        };
-        enemyState: [
-          boolean,
-          boolean,
-          boolean,
-          number,
-          number,
-          number,
-          number,
-          number
-        ] & {
-          abilityUsed: boolean;
-          frozen: boolean;
-          shielded: boolean;
-          health: number;
-          ability: number;
-          attack: number;
-          index: number;
-          length: number;
-        };
-      }
-    >;
+    ): Promise<BigNumber>;
 
     getGameTurns(
       gameHash: BigNumberish,
@@ -704,6 +714,30 @@ export class ExPopulusCardGameLogic extends BaseContract {
         };
       })[]
     >;
+
+    getTurn(
+      playerState: {
+        abilityUsed: boolean;
+        frozen: boolean;
+        shielded: boolean;
+        health: BigNumberish;
+        ability: BigNumberish;
+        attack: BigNumberish;
+        index: BigNumberish;
+        length: BigNumberish;
+      },
+      enemyState: {
+        abilityUsed: boolean;
+        frozen: boolean;
+        shielded: boolean;
+        health: BigNumberish;
+        ability: BigNumberish;
+        attack: BigNumberish;
+        index: BigNumberish;
+        length: BigNumberish;
+      },
+      overrides?: CallOverrides
+    ): Promise<BigNumber>;
 
     owner(overrides?: CallOverrides): Promise<string>;
 
@@ -842,6 +876,25 @@ export class ExPopulusCardGameLogic extends BaseContract {
 
     cards(overrides?: CallOverrides): Promise<BigNumber>;
 
+    decodeState(
+      data: BigNumberish,
+      overrides?: CallOverrides
+    ): Promise<BigNumber>;
+
+    encodeState(
+      state: {
+        abilityUsed: boolean;
+        frozen: boolean;
+        shielded: boolean;
+        health: BigNumberish;
+        ability: BigNumberish;
+        attack: BigNumberish;
+        index: BigNumberish;
+        length: BigNumberish;
+      },
+      overrides?: CallOverrides
+    ): Promise<BigNumber>;
+
     gameTurns(
       arg0: BigNumberish,
       arg1: BigNumberish,
@@ -850,6 +903,30 @@ export class ExPopulusCardGameLogic extends BaseContract {
 
     getGameTurns(
       gameHash: BigNumberish,
+      overrides?: CallOverrides
+    ): Promise<BigNumber>;
+
+    getTurn(
+      playerState: {
+        abilityUsed: boolean;
+        frozen: boolean;
+        shielded: boolean;
+        health: BigNumberish;
+        ability: BigNumberish;
+        attack: BigNumberish;
+        index: BigNumberish;
+        length: BigNumberish;
+      },
+      enemyState: {
+        abilityUsed: boolean;
+        frozen: boolean;
+        shielded: boolean;
+        health: BigNumberish;
+        ability: BigNumberish;
+        attack: BigNumberish;
+        index: BigNumberish;
+        length: BigNumberish;
+      },
       overrides?: CallOverrides
     ): Promise<BigNumber>;
 
@@ -892,6 +969,25 @@ export class ExPopulusCardGameLogic extends BaseContract {
 
     cards(overrides?: CallOverrides): Promise<PopulatedTransaction>;
 
+    decodeState(
+      data: BigNumberish,
+      overrides?: CallOverrides
+    ): Promise<PopulatedTransaction>;
+
+    encodeState(
+      state: {
+        abilityUsed: boolean;
+        frozen: boolean;
+        shielded: boolean;
+        health: BigNumberish;
+        ability: BigNumberish;
+        attack: BigNumberish;
+        index: BigNumberish;
+        length: BigNumberish;
+      },
+      overrides?: CallOverrides
+    ): Promise<PopulatedTransaction>;
+
     gameTurns(
       arg0: BigNumberish,
       arg1: BigNumberish,
@@ -900,6 +996,30 @@ export class ExPopulusCardGameLogic extends BaseContract {
 
     getGameTurns(
       gameHash: BigNumberish,
+      overrides?: CallOverrides
+    ): Promise<PopulatedTransaction>;
+
+    getTurn(
+      playerState: {
+        abilityUsed: boolean;
+        frozen: boolean;
+        shielded: boolean;
+        health: BigNumberish;
+        ability: BigNumberish;
+        attack: BigNumberish;
+        index: BigNumberish;
+        length: BigNumberish;
+      },
+      enemyState: {
+        abilityUsed: boolean;
+        frozen: boolean;
+        shielded: boolean;
+        health: BigNumberish;
+        ability: BigNumberish;
+        attack: BigNumberish;
+        index: BigNumberish;
+        length: BigNumberish;
+      },
       overrides?: CallOverrides
     ): Promise<PopulatedTransaction>;
 

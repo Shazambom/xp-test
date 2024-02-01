@@ -11,11 +11,11 @@ contract ExPopulusCardGameLogic is Ownable {
 	ExPopulusCards public cards;
 	ExPopulusToken public token;
 	struct State {
-		//Theoretically this could be packed into a bytes where the first 8-16 bits could be bools for certain states
-		// the next 5 bytes could be the health, ability, attack, index, and length. This would still leave some bytes for
-		// future expansion (This is dependent on the abi.encode and abi.decode functions that have the length encoded as well).
-		// Unfortunately the implementation of this with the commented out code works but adds roughly 3million gas to the
-		// battle function. Due to the encoding of the state struct. According
+		//This packed into a uint256 where the first 8-16 bits could be bools for certain states
+		// the next 5 bytes could be the health, ability, attack, index, and length. We This would still leave 25-26 bytes for
+		// future expansion. The current way I have it implemented we combine the two states into a single uint256.
+		// This will only leave 12-13 bytes for future expansion. But its much more efficient to store the two states
+		// in a single uint256. In total each state has 16 bytes of data to work with.
 		bool abilityUsed;
 		bool frozen;
 		bool shielded;
@@ -26,24 +26,11 @@ contract ExPopulusCardGameLogic is Ownable {
 		uint8 length;
 	}
 
-	struct Turn {
-		State playerState;
-		State enemyState;
-	}
-
-	/*
-	//Stored in the contract
-	struct Turn {
-		bytes playerState;
-		bytes enemyState;
-	}
-
 	//Returned to the client
-	struct ClientTurn {
+	struct Turn {
 		State playerState;
 		State enemyState;
 	}
-	*/
 
 	struct Record {
 		uint256 wins;
@@ -68,7 +55,7 @@ contract ExPopulusCardGameLogic is Ownable {
 	);
 
 	mapping(address => Record) public records;
-	mapping(uint256 => Turn[]) public gameTurns;
+	mapping(uint256 => uint256[]) public gameTurns;
 
 	constructor(address _cards, address _token) Ownable(msg.sender) {
 		cards = ExPopulusCards(_cards);
@@ -83,7 +70,7 @@ contract ExPopulusCardGameLogic is Ownable {
 	function battle(uint256[3] memory ids) external onlyWallets() {
 		validate(ids);
 		uint256 gameHash = rand(MAX_INT);
-		Turn[] storage playerTurns = gameTurns[gameHash];
+		uint256[] storage playerTurns = gameTurns[gameHash];
 
 		CardData[] memory playerDeck = getCards(ids);
 		CardData[] memory enemyDeck = getCards(cards.pickEnemyDeck());
@@ -109,14 +96,14 @@ contract ExPopulusCardGameLogic is Ownable {
 				(first.shielded, fWon, second.frozen) = processAbility(first.ability);
 				if (fWon) {
 					second.index = second.length;
-					playerTurns.push(Turn(playerState, enemyState));
+					playerTurns.push(getTurn(playerState, enemyState));
 					break;
 				}
 				if (!second.frozen) {
 					(second.shielded, sWon, shouldFreeze) = processAbility(second.ability);
 					if (sWon) {
 						first.index = first.length;
-						playerTurns.push(Turn(playerState, enemyState));
+						playerTurns.push(getTurn(playerState, enemyState));
 						break;
 					}
 					if (shouldFreeze && !first.shielded) {
@@ -129,7 +116,7 @@ contract ExPopulusCardGameLogic is Ownable {
 				(playerState.shielded, pWon, enemyState.frozen) = processAbility(playerState.ability);
 				if (pWon) {
 					enemyState.index = enemyState.length;
-					playerTurns.push(Turn(playerState, enemyState));
+					playerTurns.push(getTurn(playerState, enemyState));
 					break;
 				}
 			} else if (!enemyState.abilityUsed) {
@@ -138,7 +125,7 @@ contract ExPopulusCardGameLogic is Ownable {
 				(enemyState.shielded, eWon, playerState.frozen) = processAbility(enemyState.ability);
 				if (eWon) {
 					playerState.index = playerState.length;
-					playerTurns.push(Turn(playerState, enemyState));
+					playerTurns.push(getTurn(playerState, enemyState));
 					break;
 				}
 			}
@@ -148,7 +135,7 @@ contract ExPopulusCardGameLogic is Ownable {
 				if (playerState.health <= enemyState.attack) {
 					playerState.index++;
 					if (playerState.index == playerDeck.length) {
-						playerTurns.push(Turn(playerState, enemyState));
+						playerTurns.push(getTurn(playerState, enemyState));
 						break;
 					}
 					setNextCard(playerState, playerDeck[playerState.index]);
@@ -159,7 +146,7 @@ contract ExPopulusCardGameLogic is Ownable {
 				if (enemyState.health <= playerState.attack) {
 					enemyState.index++;
 					if (enemyState.index == enemyState.length) {
-						playerTurns.push(Turn(playerState, enemyState));
+						playerTurns.push(getTurn(playerState, enemyState));
 						break;
 					}
 					setNextCard(enemyState, enemyDeck[enemyState.index]);
@@ -176,7 +163,7 @@ contract ExPopulusCardGameLogic is Ownable {
 					enemyState.index++;
 				}
 				if (playerState.index == playerDeck.length || enemyState.index == enemyState.length) {
-					playerTurns.push(Turn(playerState, enemyState));
+					playerTurns.push(getTurn(playerState, enemyState));
 					break;
 				}
 				if (playerState.health <= enemyState.attack) {
@@ -190,7 +177,7 @@ contract ExPopulusCardGameLogic is Ownable {
 					enemyState.health -= playerState.attack;
 				}
 			}
-			playerTurns.push(Turn(playerState, enemyState));
+			playerTurns.push(getTurn(playerState, enemyState));
 			resetStatus(playerState);
 			resetStatus(enemyState);
 		}
@@ -268,18 +255,13 @@ contract ExPopulusCardGameLogic is Ownable {
 		return deck;
 	}
 
-	/*
-	function getGameTurns(uint256 gameHash) external view returns (ClientTurn[] memory) {
-		Turn[] memory turns = gameTurns[gameHash];
-		ClientTurn[] memory clientTurns = new ClientTurn[](turns.length);
+	function getGameTurns(uint256 gameHash) external view returns (Turn[] memory) {
+		uint256[] memory turns = gameTurns[gameHash];
+		Turn[] memory clientTurns = new Turn[](turns.length);
 		for (uint256 i = 0; i < turns.length; i++) {
-			clientTurns[i] = ClientTurn(decodeState(turns[i].playerState), decodeState(turns[i].enemyState));
+			clientTurns[i] = Turn(decodeState(turns[i]), decodeState(turns[i]<<128));
 		}
 		return clientTurns;
-	}
-	*/
-	function getGameTurns(uint256 gameHash) external view returns (Turn[] memory) {
-		return gameTurns[gameHash];
 	}
 
 	function validate(uint256[3] memory ids) public view {
@@ -302,19 +284,47 @@ contract ExPopulusCardGameLogic is Ownable {
 		token = ExPopulusToken(_token);
 	}
 
-	/*
-	function encodeState(State memory state) public pure returns (bytes memory) {
-		return abi.encode(state.abilityUsed, state.frozen, state.shielded, state.health, state.ability, state.attack, state.index, state.length);
+
+	function encodeState(State memory state) public pure returns (uint256) {
+		uint256 encoded;
+		uint256 _abilityUsed;
+		bool _bAbilityUsed = state.abilityUsed;
+		uint256 _frozen;
+		bool _bFrozen = state.frozen;
+		uint256 _shielded;
+		bool _bShielded = state.shielded;
+		assembly {
+			_abilityUsed := _bAbilityUsed
+			_frozen := _bFrozen
+			_shielded := _bShielded
+		}
+		encoded = _abilityUsed << 248;
+		encoded |= _frozen << 247;
+		encoded |= _shielded << 246;
+		encoded |= uint256(state.health) << 238;
+		encoded |= uint256(state.ability) << 230;
+		encoded |= uint256(state.attack) << 222;
+		encoded |= uint256(state.index) << 214;
+		encoded |= uint256(state.length) << 206;
+		return encoded;
 	}
 
-	function decodeState(bytes memory data) public pure returns (State memory) {
+	function decodeState(uint256 data) public pure returns (State memory) {
 		State memory state;
-		(state.abilityUsed, state.frozen, state.shielded, state.health, state.ability, state.attack, state.index, state.length) = abi.decode(data, (bool, bool, bool, uint8, uint8, uint8, uint8, uint8));
+		state.abilityUsed = data >> 248 & 1 == 1;
+		state.frozen = data >> 247 & 1 == 1;
+		state.shielded = data >> 246 & 1 == 1;
+		state.health = uint8(data >> 238 & 255);
+		state.ability = uint8(data >> 230 & 255);
+		state.attack = uint8(data >> 222 & 255);
+		state.index = uint8(data >> 214 & 255);
+		state.length = uint8(data >> 206 & 255);
 		return state;
 	}
 
-	function getTurn(State memory playerState, State memory enemyState) public pure returns (Turn memory) {
-		return Turn(encodeState(playerState), encodeState(enemyState));
+	function getTurn(State memory playerState, State memory enemyState) public pure returns (uint256) {
+		uint256 _playerState = encodeState(playerState);
+		uint256 _enemyState = encodeState(enemyState);
+		return _playerState | _enemyState >> 128;
 	}
-	*/
 }
