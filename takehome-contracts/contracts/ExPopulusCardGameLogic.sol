@@ -66,8 +66,8 @@ contract ExPopulusCardGameLogic is Ownable {
 	}
 
 	function battle(uint256[3] memory ids) external onlyWallets() {
-		uint256 gameHash = rand(MAX_INT);
 		validate(ids);
+		uint256 gameHash = rand(MAX_INT);
 		Turn[] storage playerTurns = gameTurns[gameHash];
 
 		CardData[] memory playerDeck = getCards(ids);
