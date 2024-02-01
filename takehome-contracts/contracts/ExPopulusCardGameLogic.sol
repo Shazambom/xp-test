@@ -94,12 +94,14 @@ contract ExPopulusCardGameLogic is Ownable {
 				(first.shielded, fWon, second.frozen) = processAbility(first.ability);
 				if (fWon) {
 					second.index = second.length;
+					playerTurns.push(Turn(playerState, enemyState));
 					break;
 				}
 				if (!second.frozen) {
 					(second.shielded, sWon, shouldFreeze) = processAbility(second.ability);
 					if (sWon) {
 						first.index = first.length;
+						playerTurns.push(Turn(playerState, enemyState));
 						break;
 					}
 					if (shouldFreeze && !first.shielded) {
@@ -112,6 +114,7 @@ contract ExPopulusCardGameLogic is Ownable {
 				(playerState.shielded, pWon, enemyState.frozen) = processAbility(playerState.ability);
 				if (pWon) {
 					enemyState.index = enemyState.length;
+					playerTurns.push(Turn(playerState, enemyState));
 					break;
 				}
 			} else if (!enemyState.abilityUsed) {
@@ -120,6 +123,7 @@ contract ExPopulusCardGameLogic is Ownable {
 				(enemyState.shielded, eWon, playerState.frozen) = processAbility(enemyState.ability);
 				if (eWon) {
 					playerState.index = playerState.length;
+					playerTurns.push(Turn(playerState, enemyState));
 					break;
 				}
 			}
@@ -129,6 +133,7 @@ contract ExPopulusCardGameLogic is Ownable {
 				if (playerState.health <= enemyState.attack) {
 					playerState.index++;
 					if (playerState.index == playerDeck.length) {
+						playerTurns.push(Turn(playerState, enemyState));
 						break;
 					}
 					playerState.health = playerDeck[playerState.index].health;
@@ -142,6 +147,7 @@ contract ExPopulusCardGameLogic is Ownable {
 				if (enemyState.health <= playerState.attack) {
 					enemyState.index++;
 					if (enemyState.index == enemyState.length) {
+						playerTurns.push(Turn(playerState, enemyState));
 						break;
 					}
 					enemyState.health = enemyDeck[enemyState.index].health;
@@ -161,6 +167,7 @@ contract ExPopulusCardGameLogic is Ownable {
 					enemyState.index++;
 				}
 				if (playerState.index == playerDeck.length || enemyState.index == enemyState.length) {
+					playerTurns.push(Turn(playerState, enemyState));
 					break;
 				}
 				if (playerState.health <= enemyState.attack) {
