@@ -8,7 +8,7 @@ import {BigNumber} from "ethers";
 
 describe("Unit tests", function () {
 
-	before(async function () {
+	beforeEach(async function () {
 		chai.should();
 		chai.use(chaiAsPromised);
 
@@ -33,7 +33,7 @@ describe("Unit tests", function () {
 		});
 		it("Can call a lookup function to find the minted card details by passing in an id", async function () {
 			const res = await this.contracts.exPopulusCards.connect(this.signers.creator).mintCard(this.signers.testAccount2.address, 1, 3, 2);
-			const cardDetails = await this.contracts.exPopulusCards.connect(this.signers.creator).cardDetails(2);
+			const cardDetails = await this.contracts.exPopulusCards.connect(this.signers.creator).cardDetails(1);
 			expect(cardDetails[0]).to.equal(1);
 			expect(cardDetails[1]).to.equal(3);
 			expect(cardDetails[2]).to.equal(2);
@@ -86,15 +86,17 @@ describe("Unit tests", function () {
 	});
 
 	describe("User Story #3 (Battles & Game Loop)", async function () {
-		before("setting up ability priority",async function () {
+		it("Can't start a battle unless the player owns the cards", async function () {
+			const battleRes = this.contracts.exPopulusCardGameLogic.connect(this.signers.testAccount3).battle([1, 2, 3]);
+			await expect(battleRes).to.be.rejectedWith("revert");
+		});
+		it("Can start a battle between two players", async function () {
 			const res = this.contracts.exPopulusCards.connect(this.signers.creator).setAbilityPriority(0, 30);
 			await expect(res).to.be.fulfilled;
 			const res2 = this.contracts.exPopulusCards.connect(this.signers.creator).setAbilityPriority(1, 10);
 			await expect(res2).to.be.fulfilled;
 			const res3 = this.contracts.exPopulusCards.connect(this.signers.creator).setAbilityPriority(2, 20);
 			await expect(res3).to.be.fulfilled;
-		});
-		it("Can start a battle between two players", async function () {
 			const mintRes = this.contracts.exPopulusCards.connect(this.signers.creator).mintCard(this.signers.testAccount2.address, 1, 1, 0);
 			await expect(mintRes).to.be.fulfilled;
 			const mintRes2 = this.contracts.exPopulusCards.connect(this.signers.creator).mintCard(this.signers.testAccount2.address, 1, 1, 0);
@@ -103,8 +105,22 @@ describe("Unit tests", function () {
 			await expect(mintRes3).to.be.fulfilled;
 			const battleRes = this.contracts.exPopulusCardGameLogic.connect(this.signers.testAccount2).battle([1, 2, 3]);
 			await expect(battleRes).to.be.fulfilled;
-			const balance = await this.contracts.exPopulusToken.connect(this.signers.testAccount2).balanceOf(this.signers.testAccount2.address);
-			expect(balance).to.equal(100);
+		});
+		it("Can't start battle with the same card", async function () {
+			const res = this.contracts.exPopulusCards.connect(this.signers.creator).setAbilityPriority(0, 30);
+			await expect(res).to.be.fulfilled;
+			const res2 = this.contracts.exPopulusCards.connect(this.signers.creator).setAbilityPriority(1, 10);
+			await expect(res2).to.be.fulfilled;
+			const res3 = this.contracts.exPopulusCards.connect(this.signers.creator).setAbilityPriority(2, 20);
+			await expect(res3).to.be.fulfilled;
+			const mintRes = this.contracts.exPopulusCards.connect(this.signers.creator).mintCard(this.signers.testAccount2.address, 1, 1, 0);
+			await expect(mintRes).to.be.fulfilled;
+			const mintRes2 = this.contracts.exPopulusCards.connect(this.signers.creator).mintCard(this.signers.testAccount2.address, 1, 1, 0);
+			await expect(mintRes2).to.be.fulfilled;
+			const mintRes3 = this.contracts.exPopulusCards.connect(this.signers.creator).mintCard(this.signers.testAccount2.address, 1, 1, 0);
+			await expect(mintRes3).to.be.fulfilled;
+			const battleRes = this.contracts.exPopulusCardGameLogic.connect(this.signers.testAccount2).battle([1, 2, 1]);
+			await expect(battleRes).to.be.rejectedWith("revert");
 		});
 	});
 
@@ -114,7 +130,66 @@ describe("Unit tests", function () {
 			const balance = await this.contracts.exPopulusToken.connect(this.signers.testAccount3).balanceOf(this.signers.testAccount3.address);
 			expect(balance).to.equal(100);
 		});
-		//TODO: Do a battle test and run 5 battles to se the correct behavior
+		it("When game runs and player wins a battle, they should be rewarded with tokens", async function () {
+			const res = this.contracts.exPopulusCards.connect(this.signers.creator).setAbilityPriority(0, 30);
+			await expect(res).to.be.fulfilled;
+			const res2 = this.contracts.exPopulusCards.connect(this.signers.creator).setAbilityPriority(1, 10);
+			await expect(res2).to.be.fulfilled;
+			const res3 = this.contracts.exPopulusCards.connect(this.signers.creator).setAbilityPriority(2, 20);
+			await expect(res3).to.be.fulfilled;
+			const mintRes = this.contracts.exPopulusCards.connect(this.signers.creator).mintCard(this.signers.testAccount2.address, 1, 1, 2);
+			await expect(mintRes).to.be.fulfilled;
+			const mintRes2 = this.contracts.exPopulusCards.connect(this.signers.creator).mintCard(this.signers.testAccount2.address, 1, 10, 0);
+			await expect(mintRes2).to.be.fulfilled;
+			const mintRes3 = this.contracts.exPopulusCards.connect(this.signers.creator).mintCard(this.signers.testAccount2.address, 5, 10, 2);
+			await expect(mintRes3).to.be.fulfilled;
+			let battleResult;
+			do {
+				const battleRes = this.contracts.exPopulusCardGameLogic.connect(this.signers.testAccount2).battle([1, 2, 3]);
+				await expect(battleRes).to.be.fulfilled;
+				const response = await battleRes;
+				const receipt = await response.wait();
+				for (let i = 0; i < receipt.events.length; i++) {
+					if (receipt.events[i].event == "BattleResult") {
+						battleResult = receipt.events[i];
+					}
+				}
+			} while (battleResult.args["result"] != 1);
+			const balance = await this.contracts.exPopulusToken.connect(this.signers.testAccount2).balanceOf(this.signers.testAccount2.address);
+			expect(balance).to.equal(100);
+		});
+		it("When game runs and player wins 5x in a row they get extra tokens", async function () {
+			const res = this.contracts.exPopulusCards.connect(this.signers.creator).setAbilityPriority(0, 30);
+			await expect(res).to.be.fulfilled;
+			const res2 = this.contracts.exPopulusCards.connect(this.signers.creator).setAbilityPriority(1, 10);
+			await expect(res2).to.be.fulfilled;
+			const res3 = this.contracts.exPopulusCards.connect(this.signers.creator).setAbilityPriority(2, 20);
+			await expect(res3).to.be.fulfilled;
+			const mintRes = this.contracts.exPopulusCards.connect(this.signers.creator).mintCard(this.signers.testAccount2.address, 1, 1, 2);
+			await expect(mintRes).to.be.fulfilled;
+			const mintRes2 = this.contracts.exPopulusCards.connect(this.signers.creator).mintCard(this.signers.testAccount2.address, 1, 10, 0);
+			await expect(mintRes2).to.be.fulfilled;
+			const mintRes3 = this.contracts.exPopulusCards.connect(this.signers.creator).mintCard(this.signers.testAccount2.address, 5, 10, 2);
+			await expect(mintRes3).to.be.fulfilled;
+			let winCount = 0;
+			do {
+				let battleResult;
+				const battleRes = this.contracts.exPopulusCardGameLogic.connect(this.signers.testAccount2).battle([1, 2, 3]);
+				await expect(battleRes).to.be.fulfilled;
+				const response = await battleRes;
+				const receipt = await response.wait();
+				for (let i = 0; i < receipt.events.length; i++) {
+					if (receipt.events[i].event == "BattleResult") {
+						battleResult = receipt.events[i];
+					}
+				}
+				const record = await this.contracts.exPopulusCardGameLogic.connect(this.signers.testAccount2).records(this.signers.testAccount2.address);
+				winCount = record.wins.toNumber();
+			} while (winCount < 5);
+			const balance = await this.contracts.exPopulusToken.connect(this.signers.testAccount2).balanceOf(this.signers.testAccount2.address);
+			expect(balance).to.equal(1400);
+		});
+
 	});
 
 	describe("User Story #5 (Battle Logs & Historical Lookup)", async function () {
@@ -126,7 +201,13 @@ describe("Unit tests", function () {
 			const res3 = this.contracts.exPopulusCards.connect(this.signers.creator).setAbilityPriority(2, 21);
 			await expect(res3).to.be.fulfilled;
 		});
-		it("Can start a battle between two players", async function () {
+		it("Can lookup game result in contract", async function () {
+			const res = this.contracts.exPopulusCards.connect(this.signers.creator).setAbilityPriority(0, 30);
+			await expect(res).to.be.fulfilled;
+			const res2 = this.contracts.exPopulusCards.connect(this.signers.creator).setAbilityPriority(1, 10);
+			await expect(res2).to.be.fulfilled;
+			const res3 = this.contracts.exPopulusCards.connect(this.signers.creator).setAbilityPriority(2, 20);
+			await expect(res3).to.be.fulfilled;
 			const mintRes = this.contracts.exPopulusCards.connect(this.signers.creator).mintCard(this.signers.testAccount2.address, 1, 1, 0);
 			await expect(mintRes).to.be.fulfilled;
 			const mintRes2 = this.contracts.exPopulusCards.connect(this.signers.creator).mintCard(this.signers.testAccount2.address, 1, 1, 0);
@@ -143,8 +224,8 @@ describe("Unit tests", function () {
 					battleResult = receipt.events[i];
 				}
 			}
-			expect(battleResult.args[0]).to.equal(this.signers.testAccount2.address);
-			const record = await this.contracts.exPopulusCardGameLogic.connect(this.signers.testAccount2).getGameTurns(battleResult.args[1]);
+			expect(battleResult.args["player"]).to.equal(this.signers.testAccount2.address);
+			const record = await this.contracts.exPopulusCardGameLogic.connect(this.signers.testAccount2).getGameTurns(battleResult.args["gameHash"]);
 			console.log(record);
 		});
 	});

@@ -17,7 +17,7 @@ contract ExPopulusCardGameLogic is Ownable {
 		uint8 health;
 		uint8 ability;
 		uint8 attack;
-		uint256 index;
+		uint8 index;
 		uint8 length;
 	}
 
@@ -50,6 +50,8 @@ contract ExPopulusCardGameLogic is Ownable {
 	// 0 - draw, 1 - win, 2 - lose
 		address player,
 		uint256 gameHash,
+		CardData[] playerDeck,
+		CardData[] enemyDeck,
 		uint8 result
 	);
 
@@ -106,7 +108,7 @@ contract ExPopulusCardGameLogic is Ownable {
 				bool pWon = false;
 				(playerState.shielded, pWon, enemyState.frozen) = processAbility(playerState.ability);
 				if (pWon) {
-					enemyState.index = enemyDeck.length;
+					enemyState.index = enemyState.length;
 					break;
 				}
 			} else if (!enemyState.abilityUsed) {
@@ -114,7 +116,7 @@ contract ExPopulusCardGameLogic is Ownable {
 				bool eWon = false;
 				(enemyState.shielded, eWon, playerState.frozen) = processAbility(enemyState.ability);
 				if (eWon) {
-					playerState.index = playerDeck.length;
+					playerState.index = playerState.length;
 					break;
 				}
 			}
@@ -140,7 +142,7 @@ contract ExPopulusCardGameLogic is Ownable {
 				if (!playerState.frozen) {
 					if (enemyState.health <= playerState.attack) {
 						enemyState.index++;
-						if (enemyState.index == enemyDeck.length) {
+						if (enemyState.index == enemyState.length) {
 							break;
 						}
 						enemyState.health = enemyDeck[enemyState.index].health;
@@ -160,7 +162,7 @@ contract ExPopulusCardGameLogic is Ownable {
 				if (enemyState.health <= playerState.attack) {
 					enemyState.index++;
 				}
-				if (playerState.index == playerDeck.length || enemyState.index == enemyDeck.length) {
+				if (playerState.index == playerDeck.length || enemyState.index == enemyState.length) {
 					break;
 				}
 				if (playerState.health <= enemyState.attack) {
@@ -202,7 +204,7 @@ contract ExPopulusCardGameLogic is Ownable {
 		records[msg.sender] = playerRecord;
 		grantRewards(playerRecord.wins, result);
 		gameTurns[gameHash] = playerTurns;
-		emit BattleResult(msg.sender, gameHash, result);
+		emit BattleResult(msg.sender, gameHash, playerDeck, enemyDeck, result);
 	}
 
 	function grantRewards(uint256 wins, uint256 result) internal {

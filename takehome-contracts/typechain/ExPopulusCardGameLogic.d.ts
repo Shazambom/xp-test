@@ -89,7 +89,7 @@ interface ExPopulusCardGameLogicInterface extends ethers.utils.Interface {
   decodeFunctionResult(functionFragment: "validate", data: BytesLike): Result;
 
   events: {
-    "BattleResult(address,uint256,uint8)": EventFragment;
+    "BattleResult(address,uint256,tuple[],tuple[],uint8)": EventFragment;
     "OwnershipTransferred(address,address)": EventFragment;
   };
 
@@ -98,9 +98,33 @@ interface ExPopulusCardGameLogicInterface extends ethers.utils.Interface {
 }
 
 export type BattleResultEvent = TypedEvent<
-  [string, BigNumber, number] & {
+  [
+    string,
+    BigNumber,
+    ([number, number, number] & {
+      attack: number;
+      health: number;
+      ability: number;
+    })[],
+    ([number, number, number] & {
+      attack: number;
+      health: number;
+      ability: number;
+    })[],
+    number
+  ] & {
     player: string;
     gameHash: BigNumber;
+    playerDeck: ([number, number, number] & {
+      attack: number;
+      health: number;
+      ability: number;
+    })[];
+    enemyDeck: ([number, number, number] & {
+      attack: number;
+      health: number;
+      ability: number;
+    })[];
     result: number;
   }
 >;
@@ -166,42 +190,24 @@ export class ExPopulusCardGameLogic extends BaseContract {
       overrides?: CallOverrides
     ): Promise<
       [
-        [
-          boolean,
-          boolean,
-          boolean,
-          number,
-          number,
-          number,
-          BigNumber,
-          number
-        ] & {
+        [boolean, boolean, boolean, number, number, number, number, number] & {
           abilityUsed: boolean;
           frozen: boolean;
           shielded: boolean;
           health: number;
           ability: number;
           attack: number;
-          index: BigNumber;
+          index: number;
           length: number;
         },
-        [
-          boolean,
-          boolean,
-          boolean,
-          number,
-          number,
-          number,
-          BigNumber,
-          number
-        ] & {
+        [boolean, boolean, boolean, number, number, number, number, number] & {
           abilityUsed: boolean;
           frozen: boolean;
           shielded: boolean;
           health: number;
           ability: number;
           attack: number;
-          index: BigNumber;
+          index: number;
           length: number;
         }
       ] & {
@@ -212,7 +218,7 @@ export class ExPopulusCardGameLogic extends BaseContract {
           number,
           number,
           number,
-          BigNumber,
+          number,
           number
         ] & {
           abilityUsed: boolean;
@@ -221,7 +227,7 @@ export class ExPopulusCardGameLogic extends BaseContract {
           health: number;
           ability: number;
           attack: number;
-          index: BigNumber;
+          index: number;
           length: number;
         };
         enemyState: [
@@ -231,7 +237,7 @@ export class ExPopulusCardGameLogic extends BaseContract {
           number,
           number,
           number,
-          BigNumber,
+          number,
           number
         ] & {
           abilityUsed: boolean;
@@ -240,7 +246,7 @@ export class ExPopulusCardGameLogic extends BaseContract {
           health: number;
           ability: number;
           attack: number;
-          index: BigNumber;
+          index: number;
           length: number;
         };
       }
@@ -259,7 +265,7 @@ export class ExPopulusCardGameLogic extends BaseContract {
             number,
             number,
             number,
-            BigNumber,
+            number,
             number
           ] & {
             abilityUsed: boolean;
@@ -268,7 +274,7 @@ export class ExPopulusCardGameLogic extends BaseContract {
             health: number;
             ability: number;
             attack: number;
-            index: BigNumber;
+            index: number;
             length: number;
           },
           [
@@ -278,7 +284,7 @@ export class ExPopulusCardGameLogic extends BaseContract {
             number,
             number,
             number,
-            BigNumber,
+            number,
             number
           ] & {
             abilityUsed: boolean;
@@ -287,7 +293,7 @@ export class ExPopulusCardGameLogic extends BaseContract {
             health: number;
             ability: number;
             attack: number;
-            index: BigNumber;
+            index: number;
             length: number;
           }
         ] & {
@@ -298,7 +304,7 @@ export class ExPopulusCardGameLogic extends BaseContract {
             number,
             number,
             number,
-            BigNumber,
+            number,
             number
           ] & {
             abilityUsed: boolean;
@@ -307,7 +313,7 @@ export class ExPopulusCardGameLogic extends BaseContract {
             health: number;
             ability: number;
             attack: number;
-            index: BigNumber;
+            index: number;
             length: number;
           };
           enemyState: [
@@ -317,7 +323,7 @@ export class ExPopulusCardGameLogic extends BaseContract {
             number,
             number,
             number,
-            BigNumber,
+            number,
             number
           ] & {
             abilityUsed: boolean;
@@ -326,7 +332,7 @@ export class ExPopulusCardGameLogic extends BaseContract {
             health: number;
             ability: number;
             attack: number;
-            index: BigNumber;
+            index: number;
             length: number;
           };
         })[]
@@ -386,24 +392,24 @@ export class ExPopulusCardGameLogic extends BaseContract {
     overrides?: CallOverrides
   ): Promise<
     [
-      [boolean, boolean, boolean, number, number, number, BigNumber, number] & {
+      [boolean, boolean, boolean, number, number, number, number, number] & {
         abilityUsed: boolean;
         frozen: boolean;
         shielded: boolean;
         health: number;
         ability: number;
         attack: number;
-        index: BigNumber;
+        index: number;
         length: number;
       },
-      [boolean, boolean, boolean, number, number, number, BigNumber, number] & {
+      [boolean, boolean, boolean, number, number, number, number, number] & {
         abilityUsed: boolean;
         frozen: boolean;
         shielded: boolean;
         health: number;
         ability: number;
         attack: number;
-        index: BigNumber;
+        index: number;
         length: number;
       }
     ] & {
@@ -414,7 +420,7 @@ export class ExPopulusCardGameLogic extends BaseContract {
         number,
         number,
         number,
-        BigNumber,
+        number,
         number
       ] & {
         abilityUsed: boolean;
@@ -423,7 +429,7 @@ export class ExPopulusCardGameLogic extends BaseContract {
         health: number;
         ability: number;
         attack: number;
-        index: BigNumber;
+        index: number;
         length: number;
       };
       enemyState: [
@@ -433,7 +439,7 @@ export class ExPopulusCardGameLogic extends BaseContract {
         number,
         number,
         number,
-        BigNumber,
+        number,
         number
       ] & {
         abilityUsed: boolean;
@@ -442,7 +448,7 @@ export class ExPopulusCardGameLogic extends BaseContract {
         health: number;
         ability: number;
         attack: number;
-        index: BigNumber;
+        index: number;
         length: number;
       };
     }
@@ -453,24 +459,24 @@ export class ExPopulusCardGameLogic extends BaseContract {
     overrides?: CallOverrides
   ): Promise<
     ([
-      [boolean, boolean, boolean, number, number, number, BigNumber, number] & {
+      [boolean, boolean, boolean, number, number, number, number, number] & {
         abilityUsed: boolean;
         frozen: boolean;
         shielded: boolean;
         health: number;
         ability: number;
         attack: number;
-        index: BigNumber;
+        index: number;
         length: number;
       },
-      [boolean, boolean, boolean, number, number, number, BigNumber, number] & {
+      [boolean, boolean, boolean, number, number, number, number, number] & {
         abilityUsed: boolean;
         frozen: boolean;
         shielded: boolean;
         health: number;
         ability: number;
         attack: number;
-        index: BigNumber;
+        index: number;
         length: number;
       }
     ] & {
@@ -481,7 +487,7 @@ export class ExPopulusCardGameLogic extends BaseContract {
         number,
         number,
         number,
-        BigNumber,
+        number,
         number
       ] & {
         abilityUsed: boolean;
@@ -490,7 +496,7 @@ export class ExPopulusCardGameLogic extends BaseContract {
         health: number;
         ability: number;
         attack: number;
-        index: BigNumber;
+        index: number;
         length: number;
       };
       enemyState: [
@@ -500,7 +506,7 @@ export class ExPopulusCardGameLogic extends BaseContract {
         number,
         number,
         number,
-        BigNumber,
+        number,
         number
       ] & {
         abilityUsed: boolean;
@@ -509,7 +515,7 @@ export class ExPopulusCardGameLogic extends BaseContract {
         health: number;
         ability: number;
         attack: number;
-        index: BigNumber;
+        index: number;
         length: number;
       };
     })[]
@@ -568,42 +574,24 @@ export class ExPopulusCardGameLogic extends BaseContract {
       overrides?: CallOverrides
     ): Promise<
       [
-        [
-          boolean,
-          boolean,
-          boolean,
-          number,
-          number,
-          number,
-          BigNumber,
-          number
-        ] & {
+        [boolean, boolean, boolean, number, number, number, number, number] & {
           abilityUsed: boolean;
           frozen: boolean;
           shielded: boolean;
           health: number;
           ability: number;
           attack: number;
-          index: BigNumber;
+          index: number;
           length: number;
         },
-        [
-          boolean,
-          boolean,
-          boolean,
-          number,
-          number,
-          number,
-          BigNumber,
-          number
-        ] & {
+        [boolean, boolean, boolean, number, number, number, number, number] & {
           abilityUsed: boolean;
           frozen: boolean;
           shielded: boolean;
           health: number;
           ability: number;
           attack: number;
-          index: BigNumber;
+          index: number;
           length: number;
         }
       ] & {
@@ -614,7 +602,7 @@ export class ExPopulusCardGameLogic extends BaseContract {
           number,
           number,
           number,
-          BigNumber,
+          number,
           number
         ] & {
           abilityUsed: boolean;
@@ -623,7 +611,7 @@ export class ExPopulusCardGameLogic extends BaseContract {
           health: number;
           ability: number;
           attack: number;
-          index: BigNumber;
+          index: number;
           length: number;
         };
         enemyState: [
@@ -633,7 +621,7 @@ export class ExPopulusCardGameLogic extends BaseContract {
           number,
           number,
           number,
-          BigNumber,
+          number,
           number
         ] & {
           abilityUsed: boolean;
@@ -642,7 +630,7 @@ export class ExPopulusCardGameLogic extends BaseContract {
           health: number;
           ability: number;
           attack: number;
-          index: BigNumber;
+          index: number;
           length: number;
         };
       }
@@ -653,42 +641,24 @@ export class ExPopulusCardGameLogic extends BaseContract {
       overrides?: CallOverrides
     ): Promise<
       ([
-        [
-          boolean,
-          boolean,
-          boolean,
-          number,
-          number,
-          number,
-          BigNumber,
-          number
-        ] & {
+        [boolean, boolean, boolean, number, number, number, number, number] & {
           abilityUsed: boolean;
           frozen: boolean;
           shielded: boolean;
           health: number;
           ability: number;
           attack: number;
-          index: BigNumber;
+          index: number;
           length: number;
         },
-        [
-          boolean,
-          boolean,
-          boolean,
-          number,
-          number,
-          number,
-          BigNumber,
-          number
-        ] & {
+        [boolean, boolean, boolean, number, number, number, number, number] & {
           abilityUsed: boolean;
           frozen: boolean;
           shielded: boolean;
           health: number;
           ability: number;
           attack: number;
-          index: BigNumber;
+          index: number;
           length: number;
         }
       ] & {
@@ -699,7 +669,7 @@ export class ExPopulusCardGameLogic extends BaseContract {
           number,
           number,
           number,
-          BigNumber,
+          number,
           number
         ] & {
           abilityUsed: boolean;
@@ -708,7 +678,7 @@ export class ExPopulusCardGameLogic extends BaseContract {
           health: number;
           ability: number;
           attack: number;
-          index: BigNumber;
+          index: number;
           length: number;
         };
         enemyState: [
@@ -718,7 +688,7 @@ export class ExPopulusCardGameLogic extends BaseContract {
           number,
           number,
           number,
-          BigNumber,
+          number,
           number
         ] & {
           abilityUsed: boolean;
@@ -727,7 +697,7 @@ export class ExPopulusCardGameLogic extends BaseContract {
           health: number;
           ability: number;
           attack: number;
-          index: BigNumber;
+          index: number;
           length: number;
         };
       })[]
@@ -766,22 +736,82 @@ export class ExPopulusCardGameLogic extends BaseContract {
   };
 
   filters: {
-    "BattleResult(address,uint256,uint8)"(
+    "BattleResult(address,uint256,tuple[],tuple[],uint8)"(
       player?: null,
       gameHash?: null,
+      playerDeck?: null,
+      enemyDeck?: null,
       result?: null
     ): TypedEventFilter<
-      [string, BigNumber, number],
-      { player: string; gameHash: BigNumber; result: number }
+      [
+        string,
+        BigNumber,
+        ([number, number, number] & {
+          attack: number;
+          health: number;
+          ability: number;
+        })[],
+        ([number, number, number] & {
+          attack: number;
+          health: number;
+          ability: number;
+        })[],
+        number
+      ],
+      {
+        player: string;
+        gameHash: BigNumber;
+        playerDeck: ([number, number, number] & {
+          attack: number;
+          health: number;
+          ability: number;
+        })[];
+        enemyDeck: ([number, number, number] & {
+          attack: number;
+          health: number;
+          ability: number;
+        })[];
+        result: number;
+      }
     >;
 
     BattleResult(
       player?: null,
       gameHash?: null,
+      playerDeck?: null,
+      enemyDeck?: null,
       result?: null
     ): TypedEventFilter<
-      [string, BigNumber, number],
-      { player: string; gameHash: BigNumber; result: number }
+      [
+        string,
+        BigNumber,
+        ([number, number, number] & {
+          attack: number;
+          health: number;
+          ability: number;
+        })[],
+        ([number, number, number] & {
+          attack: number;
+          health: number;
+          ability: number;
+        })[],
+        number
+      ],
+      {
+        player: string;
+        gameHash: BigNumber;
+        playerDeck: ([number, number, number] & {
+          attack: number;
+          health: number;
+          ability: number;
+        })[];
+        enemyDeck: ([number, number, number] & {
+          attack: number;
+          health: number;
+          ability: number;
+        })[];
+        result: number;
+      }
     >;
 
     "OwnershipTransferred(address,address)"(
