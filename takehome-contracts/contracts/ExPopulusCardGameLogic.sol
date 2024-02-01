@@ -69,7 +69,7 @@ contract ExPopulusCardGameLogic is Ownable {
 
 	function battle(uint256[3] memory ids) external onlyWallets() {
 		validate(ids);
-		uint256 gameHash = rand(MAX_INT);
+		uint256 gameHash = rand(MAX_INT, 0);
 		uint256[] storage playerTurns = gameTurns[gameHash];
 
 		CardData[] memory playerDeck = getCards(ids);
@@ -78,6 +78,7 @@ contract ExPopulusCardGameLogic is Ownable {
 		State memory enemyState = State(false, false, false, enemyDeck[0].health, enemyDeck[0].ability, enemyDeck[0].attack, 0, uint8(enemyDeck.length));
 		State memory first;
 		State memory second;
+		uint256 index;
 		while (playerState.index < playerDeck.length && enemyState.index < enemyDeck.length) {
 			//We check abilities here and apply them to the states in the order they were placed in priority
 			if (!playerState.abilityUsed && !enemyState.abilityUsed) {
@@ -93,14 +94,14 @@ contract ExPopulusCardGameLogic is Ownable {
 				bool fWon = false;
 				bool sWon = false;
 				bool shouldFreeze = false;
-				(first.shielded, fWon, second.frozen) = processAbility(first.ability);
+				(first.shielded, fWon, second.frozen) = processAbility(first.ability, index);
 				if (fWon) {
 					second.index = second.length;
 					playerTurns.push(getTurn(playerState, enemyState));
 					break;
 				}
 				if (!second.frozen) {
-					(second.shielded, sWon, shouldFreeze) = processAbility(second.ability);
+					(second.shielded, sWon, shouldFreeze) = processAbility(second.ability, index);
 					if (sWon) {
 						first.index = first.length;
 						playerTurns.push(getTurn(playerState, enemyState));
@@ -113,7 +114,7 @@ contract ExPopulusCardGameLogic is Ownable {
 			} else if (!playerState.abilityUsed) {
 				playerState.abilityUsed = true;
 				bool pWon = false;
-				(playerState.shielded, pWon, enemyState.frozen) = processAbility(playerState.ability);
+				(playerState.shielded, pWon, enemyState.frozen) = processAbility(playerState.ability, index);
 				if (pWon) {
 					enemyState.index = enemyState.length;
 					playerTurns.push(getTurn(playerState, enemyState));
@@ -122,7 +123,7 @@ contract ExPopulusCardGameLogic is Ownable {
 			} else if (!enemyState.abilityUsed) {
 				enemyState.abilityUsed = true;
 				bool eWon = false;
-				(enemyState.shielded, eWon, playerState.frozen) = processAbility(enemyState.ability);
+				(enemyState.shielded, eWon, playerState.frozen) = processAbility(enemyState.ability, index);
 				if (eWon) {
 					playerState.index = playerState.length;
 					playerTurns.push(getTurn(playerState, enemyState));
@@ -180,6 +181,7 @@ contract ExPopulusCardGameLogic is Ownable {
 			playerTurns.push(getTurn(playerState, enemyState));
 			resetStatus(playerState);
 			resetStatus(enemyState);
+			index++;
 		}
 		Record memory playerRecord = records[msg.sender];
 		uint8 result = 0;
@@ -222,11 +224,11 @@ contract ExPopulusCardGameLogic is Ownable {
 		state.abilityUsed = false;
 	}
 
-	function processAbility(uint8 ability) internal view returns (bool, bool, bool) {
+	function processAbility(uint8 ability, uint256 index) internal view returns (bool, bool, bool) {
 		if (ability == 0) {
 			return (true, false, false);
 		} else if (ability == 1) {
-			if (rand(100) >= 90) {
+			if (rand(100, index) >= 90) {
 				return (false, true, false);
 			}
 			return (false, false, false);
@@ -236,9 +238,9 @@ contract ExPopulusCardGameLogic is Ownable {
 		revert("invalid ability");
 	}
 
-	function rand(uint256 _modulus) internal view returns (uint256) {
+	function rand(uint256 _modulus, uint256 salt) internal view returns (uint256) {
 		//Again a better random function is probably needed for production but this will do
-		return uint256(keccak256(abi.encodePacked(block.timestamp, block.prevrandao, msg.sender, tx.origin))) % _modulus;
+		return uint256(keccak256(abi.encodePacked(block.timestamp, block.prevrandao, msg.sender, tx.origin, salt))) % _modulus;
 	}
 
 	function getCards(uint256[3] memory ids) internal view returns (CardData[] memory) {
