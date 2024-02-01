@@ -20,18 +20,14 @@ contract ExPopulusCards is ERC721, AccessControl {
 	);
 
 	NftData[] public nftData;
-	uint256[] public abilityPriority;
-	uint256 maxAbility;
+	uint256[] public abilityPriority = [0, 0, 0];
+	//This is the default for now but ideally this would be set up to be configurable along with the abilityPriority
+	// list. The list would grow with the changes to maxAbility.
+	uint256 maxAbility = 2;
 
 	constructor() ERC721("ExPopulusCards", "EPC") AccessControl() {
 		_grantRole(DEFAULT_ADMIN_ROLE, msg.sender);
 		_grantRole(MINTER_ROLE, msg.sender);
-		//This is the default for now but ideally this would be set up to be configurable along with the abilityPriority
-		// list. The list would grow with the changes to maxAbility. However, for now, this is fine.
-		maxAbility = 2;
-		//This isn't guaranteed to actually have priorities for each ability
-		abilityPriority = [0, 0, 0];
-
 		// this is a hack to make the first card id 1 but we could just add 1 to each id when we use it
 		// this is likely more gas efficient but I don't know for sure
 		// Need this because having 0 as the null case is useful.
@@ -46,6 +42,13 @@ contract ExPopulusCards is ERC721, AccessControl {
 	}
 
 	function updateMaxAbility(uint256 _maxAbility) external onlyRole(DEFAULT_ADMIN_ROLE) {
+		if (_maxAbility <= maxAbility) {
+			revert("Max ability must be greater than the current max ability");
+		}
+		uint256 diff = _maxAbility - maxAbility;
+		for (uint256 i = 0; i < diff; i++) {
+			abilityPriority.push(0);
+		}
 		maxAbility = _maxAbility;
 	}
 
@@ -57,19 +60,15 @@ contract ExPopulusCards is ERC721, AccessControl {
 	}
 
 	function setAbilityPriority(uint256 ability, uint256 priority) external onlyRole(DEFAULT_ADMIN_ROLE) abilityCheck(ability) {
-		if (ability > maxAbility) {
-			revert("Ability must be less than the max ability");
-		}
 		//add 1 to the priority because 0 is the null case
 		uint256 _priority = priority+1;
 		for (uint256 i = 0; i <= maxAbility; i++) {
-			//TODO: For now I don't like this, loops are notoriously bad in solidity
-			// I will live with it because it will work but there has got to be a better way.
+			//For now I don't like this, loops are notoriously bad in solidity I will live with it because it will work but
+			// there has got to be a better way. At least the number of abilities will likely not get very large.
 			if (abilityPriority[i] == _priority) {
 				revert("Priority already exists");
 			}
 		}
-		//TODO: Figure out how not to get index out of bounds error and expand the array if needed
 		abilityPriority[ability] = _priority;
 	}
 

@@ -24,6 +24,7 @@ export async function deployContracts(): Promise<IDeployContractsOutput> {
 
 	const exPopulusCardGameLogicFactory = await ethers.getContractFactory("ExPopulusCardGameLogic", creator);
 	const exPopulusCardGameLogic = await exPopulusCardGameLogicFactory.deploy(exPopulusCardsContract.address, exPopulusTokenContract.address);
+	console.log("Game logic address: ", exPopulusCardGameLogic.address);
 	return {
 		exPopulusToken: exPopulusTokenContract as ExPopulusToken,
 		exPopulusCards: exPopulusCardsContract as ExPopulusCards,
