@@ -8,15 +8,18 @@ import "@openzeppelin/contracts/access/Ownable.sol";
 
 contract ExPopulusCardGameLogic is Ownable {
 
-	IExPopulusCards public cards;
+	ExPopulusCards public cards;
 	ExPopulusToken public token;
 	struct State {
 		bool abilityUsed;
 		bool frozen;
 		bool shielded;
 		uint8 health;
+		uint8 ability;
 		uint256 index;
+		uint8 length;
 	}
+
 	struct Record {
 		uint256 wins;
 		uint256 losses;
@@ -25,8 +28,8 @@ contract ExPopulusCardGameLogic is Ownable {
 
 	mapping(address => Record) public records;
 
-	constructor(address _cards, address _token) Ownable() {
-		cards = IExPopulusCards(_cards);
+	constructor(address _cards, address _token) Ownable(msg.sender) {
+		cards = ExPopulusCards(_cards);
 		token = ExPopulusToken(_token);
 	}
 	struct CardData {
@@ -48,22 +51,24 @@ contract ExPopulusCardGameLogic is Ownable {
 		_;
 	}
 
-	function battle(uint256[3] calldata ids) external onlyWallets() {
+	function battle(uint256[3] memory ids) external onlyWallets() {
 		validate(ids);
 		CardData[] memory playerDeck = getCards(ids);
 		CardData[] memory enemyDeck = getCards(cards.pickEnemyDeck());
-		State playerState = State(false, false, false, playerDeck[0], 0);
-		State enemyState = State(false, false, false, enemyDeck[0], 0);
+		State memory playerState = State(false, false, false, playerDeck[0].health, playerDeck[0].ability, 0, uint8(playerDeck.length));
+		State memory enemyState = State(false, false, false, enemyDeck[0].health, playerDeck[0].ability, 0, uint8(enemyDeck.length));
 		//TODO: Clean this up if possible
+		CardData memory playerCard;
+		CardData memory enemyCard;
+		State memory first;
+		State memory second;
 		while (playerState.index < playerDeck.length && enemyState.index < enemyDeck.length) {
-			CardData playerCard = playerDeck[playerState.index];
-			CardData enemyCard = enemyDeck[enemyState.index];
+			playerCard = playerDeck[playerState.index];
+			enemyCard = enemyDeck[enemyState.index];
 			//We check abilities here and apply them to the states in the order they were placed in priority
 			if (!playerState.abilityUsed && !enemyState.abilityUsed) {
 				playerState.abilityUsed = true;
 				enemyState.abilityUsed = true;
-				State first;
-				State second;
 				if (cards.checkAbility(playerCard.ability, enemyCard.ability)) {
 					first = playerState;
 					second = enemyState;
@@ -94,7 +99,7 @@ contract ExPopulusCardGameLogic is Ownable {
 				bool pWon = false;
 				(playerState.shielded, pWon, enemyState.frozen) = processAbility(playerCard.ability);
 				if (pWon) {
-					eIdx = enemyDeck.length;
+					enemyState.index = enemyDeck.length;
 					break;
 				}
 			} else if (!enemyState.abilityUsed) {
@@ -102,7 +107,7 @@ contract ExPopulusCardGameLogic is Ownable {
 				bool eWon = false;
 				(enemyState.shielded, eWon, playerState.frozen) = processAbility(enemyCard.ability);
 				if (eWon) {
-					pIdx = playerDeck.length;
+					playerState.index = playerDeck.length;
 					break;
 				}
 			}
@@ -112,10 +117,11 @@ contract ExPopulusCardGameLogic is Ownable {
 				if (!enemyState.frozen) {
 					if (playerState.health <= enemyCard.attack) {
 						playerState.index++;
-						if (pIdx == playerDeck.length) {
+						if (playerState.index == playerDeck.length) {
 							break;
 						}
-						playerState.health = playerDeck[pIdx].health;
+						playerState.health = playerDeck[playerState.index].health;
+						playerState.ability = playerDeck[playerState.index].ability;
 						playerState.abilityUsed = false;
 					} else {
 						playerState.health -= enemyCard.attack;
@@ -126,10 +132,11 @@ contract ExPopulusCardGameLogic is Ownable {
 				if (!playerState.frozen) {
 					if (enemyState.health <= playerCard.attack) {
 						enemyState.index++;
-						if (eIdx == enemyDeck.length) {
+						if (enemyState.index == enemyDeck.length) {
 							break;
 						}
-						enemyState.health = enemyDeck[eIdx].health;
+						enemyState.health = enemyDeck[enemyState.index].health;
+						enemyState.ability = enemyDeck[enemyState.index].ability;
 						enemyState.abilityUsed = false;
 					} else {
 						enemyState.health -= playerCard.attack;
@@ -149,11 +156,15 @@ contract ExPopulusCardGameLogic is Ownable {
 				}
 				if (playerState.health <= enemyCard.attack) {
 					playerState.health = playerDeck[playerState.index].health;
+					playerState.ability = playerDeck[playerState.index].ability;
+					playerState.abilityUsed = false;
 				} else {
 					playerState.health -= enemyCard.attack;
 				}
 				if (enemyState.health <= playerCard.attack) {
 					enemyState.health = enemyDeck[enemyState.index].health;
+					enemyState.ability = enemyDeck[enemyState.index].ability;
+					enemyState.abilityUsed = false;
 				} else {
 					enemyState.health -= playerCard.attack;
 				}
@@ -176,7 +187,6 @@ contract ExPopulusCardGameLogic is Ownable {
 			result = 1;
 		}
 		records[msg.sender] = playerRecord;
-		emit BattleResult(playerDeck, enemyDeck, result);
 		grantRewards(playerRecord.wins, result);
 	}
 
@@ -190,15 +200,15 @@ contract ExPopulusCardGameLogic is Ownable {
 		}
 	}
 
-	function processAbility(uint8 ability) internal pure returns (bool, bool, bool) {
-		if (playerCard.ability == 0) {
+	function processAbility(uint8 ability) internal view returns (bool, bool, bool) {
+		if (ability == 0) {
 			return (true, false, false);
-		} else if (playerCard.ability == 1) {
+		} else if (ability == 1) {
 			if (rand(100) >= 90) {
 				return (false, true, false);
 			}
 			return (false, false, false);
-		} else if (playerCard.ability == 2) {
+		} else if (ability == 2) {
 			return (false, false, true);
 		}
 		revert("invalid ability");
@@ -206,22 +216,24 @@ contract ExPopulusCardGameLogic is Ownable {
 
 	function rand(uint256 _modulus) internal view returns (uint256) {
 		//Again a better random function is probably needed for production but this will do
-		return uint256(keccak256(abi.encodePacked(block.timestamp, block.difficulty, msg.sender, tx.origin))) % _modulus;
+		return uint256(keccak256(abi.encodePacked(block.timestamp, block.prevrandao, msg.sender, tx.origin))) % _modulus;
 	}
 
-	function getCards(uint256[3] calldata ids) external returns (CardData[] memory) {
-		CardData[] memory deck;
-		for (uint256 i = 0; i < 3; i++) {
+	function getCards(uint256[3] memory ids) internal view returns (CardData[] memory) {
+		CardData[] memory deck = new CardData[](3);
+		uint256 count = 0;
+		for (uint256 i = 0; i < ids.length; i++) {
 			if (ids[i] != 0) {
-				CardData data;
+				CardData memory data;
 				(data.attack, data.health, data.ability) = cards.cardDetails(ids[i]);
-				deck.push(data);
+				deck[count] = data;
+				count++;
 			}
 		}
 		return deck;
 	}
 
-	function validate(uint256[3] calldata ids) public view {
+	function validate(uint256[3] memory ids) public view {
 		if ((cards.ownerOf(ids[0]) != msg.sender && ids[0] != 0) ||
 			(cards.ownerOf(ids[1]) != msg.sender && ids[1] != 0) ||
 			(cards.ownerOf(ids[2]) != msg.sender && ids[2] != 0)) {
@@ -234,7 +246,7 @@ contract ExPopulusCardGameLogic is Ownable {
 	}
 
 	function setCards(address _cards) external onlyOwner() {
-		cards = IExPopulusCards(_cards);
+		cards = ExPopulusCards(_cards);
 	}
 
 	function setToken(address _token) external onlyOwner() {

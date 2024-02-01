@@ -21,15 +21,146 @@ import type { TypedEventFilter, TypedEvent, TypedListener } from "./common";
 
 interface ExPopulusCardGameLogicInterface extends ethers.utils.Interface {
   functions: {
-    "battle()": FunctionFragment;
+    "battle(uint256[3])": FunctionFragment;
+    "cards()": FunctionFragment;
+    "owner()": FunctionFragment;
+    "records(address)": FunctionFragment;
+    "renounceOwnership()": FunctionFragment;
+    "setCards(address)": FunctionFragment;
+    "setToken(address)": FunctionFragment;
+    "token()": FunctionFragment;
+    "transferOwnership(address)": FunctionFragment;
+    "validate(uint256[3])": FunctionFragment;
   };
 
-  encodeFunctionData(functionFragment: "battle", values?: undefined): string;
+  encodeFunctionData(
+    functionFragment: "battle",
+    values: [[BigNumberish, BigNumberish, BigNumberish]]
+  ): string;
+  encodeFunctionData(functionFragment: "cards", values?: undefined): string;
+  encodeFunctionData(functionFragment: "owner", values?: undefined): string;
+  encodeFunctionData(functionFragment: "records", values: [string]): string;
+  encodeFunctionData(
+    functionFragment: "renounceOwnership",
+    values?: undefined
+  ): string;
+  encodeFunctionData(functionFragment: "setCards", values: [string]): string;
+  encodeFunctionData(functionFragment: "setToken", values: [string]): string;
+  encodeFunctionData(functionFragment: "token", values?: undefined): string;
+  encodeFunctionData(
+    functionFragment: "transferOwnership",
+    values: [string]
+  ): string;
+  encodeFunctionData(
+    functionFragment: "validate",
+    values: [[BigNumberish, BigNumberish, BigNumberish]]
+  ): string;
 
   decodeFunctionResult(functionFragment: "battle", data: BytesLike): Result;
+  decodeFunctionResult(functionFragment: "cards", data: BytesLike): Result;
+  decodeFunctionResult(functionFragment: "owner", data: BytesLike): Result;
+  decodeFunctionResult(functionFragment: "records", data: BytesLike): Result;
+  decodeFunctionResult(
+    functionFragment: "renounceOwnership",
+    data: BytesLike
+  ): Result;
+  decodeFunctionResult(functionFragment: "setCards", data: BytesLike): Result;
+  decodeFunctionResult(functionFragment: "setToken", data: BytesLike): Result;
+  decodeFunctionResult(functionFragment: "token", data: BytesLike): Result;
+  decodeFunctionResult(
+    functionFragment: "transferOwnership",
+    data: BytesLike
+  ): Result;
+  decodeFunctionResult(functionFragment: "validate", data: BytesLike): Result;
 
-  events: {};
+  events: {
+    "BattleResult(tuple[3],tuple[3],uint8)": EventFragment;
+    "OwnershipTransferred(address,address)": EventFragment;
+  };
+
+  getEvent(nameOrSignatureOrTopic: "BattleResult"): EventFragment;
+  getEvent(nameOrSignatureOrTopic: "OwnershipTransferred"): EventFragment;
 }
+
+export type BattleResultEvent = TypedEvent<
+  [
+    [
+      [number, number, number] & {
+        attack: number;
+        health: number;
+        ability: number;
+      },
+      [number, number, number] & {
+        attack: number;
+        health: number;
+        ability: number;
+      },
+      [number, number, number] & {
+        attack: number;
+        health: number;
+        ability: number;
+      }
+    ],
+    [
+      [number, number, number] & {
+        attack: number;
+        health: number;
+        ability: number;
+      },
+      [number, number, number] & {
+        attack: number;
+        health: number;
+        ability: number;
+      },
+      [number, number, number] & {
+        attack: number;
+        health: number;
+        ability: number;
+      }
+    ],
+    number
+  ] & {
+    playerDeck: [
+      [number, number, number] & {
+        attack: number;
+        health: number;
+        ability: number;
+      },
+      [number, number, number] & {
+        attack: number;
+        health: number;
+        ability: number;
+      },
+      [number, number, number] & {
+        attack: number;
+        health: number;
+        ability: number;
+      }
+    ];
+    enemyDeck: [
+      [number, number, number] & {
+        attack: number;
+        health: number;
+        ability: number;
+      },
+      [number, number, number] & {
+        attack: number;
+        health: number;
+        ability: number;
+      },
+      [number, number, number] & {
+        attack: number;
+        health: number;
+        ability: number;
+      }
+    ];
+    result: number;
+  }
+>;
+
+export type OwnershipTransferredEvent = TypedEvent<
+  [string, string] & { previousOwner: string; newOwner: string }
+>;
 
 export class ExPopulusCardGameLogic extends BaseContract {
   connect(signerOrProvider: Signer | Provider | string): this;
@@ -76,29 +207,396 @@ export class ExPopulusCardGameLogic extends BaseContract {
 
   functions: {
     battle(
+      ids: [BigNumberish, BigNumberish, BigNumberish],
       overrides?: Overrides & { from?: string | Promise<string> }
     ): Promise<ContractTransaction>;
+
+    cards(overrides?: CallOverrides): Promise<[string]>;
+
+    owner(overrides?: CallOverrides): Promise<[string]>;
+
+    records(
+      arg0: string,
+      overrides?: CallOverrides
+    ): Promise<
+      [BigNumber, BigNumber, BigNumber] & {
+        wins: BigNumber;
+        losses: BigNumber;
+        draws: BigNumber;
+      }
+    >;
+
+    renounceOwnership(
+      overrides?: Overrides & { from?: string | Promise<string> }
+    ): Promise<ContractTransaction>;
+
+    setCards(
+      _cards: string,
+      overrides?: Overrides & { from?: string | Promise<string> }
+    ): Promise<ContractTransaction>;
+
+    setToken(
+      _token: string,
+      overrides?: Overrides & { from?: string | Promise<string> }
+    ): Promise<ContractTransaction>;
+
+    token(overrides?: CallOverrides): Promise<[string]>;
+
+    transferOwnership(
+      newOwner: string,
+      overrides?: Overrides & { from?: string | Promise<string> }
+    ): Promise<ContractTransaction>;
+
+    validate(
+      ids: [BigNumberish, BigNumberish, BigNumberish],
+      overrides?: CallOverrides
+    ): Promise<[void]>;
   };
 
   battle(
+    ids: [BigNumberish, BigNumberish, BigNumberish],
     overrides?: Overrides & { from?: string | Promise<string> }
   ): Promise<ContractTransaction>;
 
+  cards(overrides?: CallOverrides): Promise<string>;
+
+  owner(overrides?: CallOverrides): Promise<string>;
+
+  records(
+    arg0: string,
+    overrides?: CallOverrides
+  ): Promise<
+    [BigNumber, BigNumber, BigNumber] & {
+      wins: BigNumber;
+      losses: BigNumber;
+      draws: BigNumber;
+    }
+  >;
+
+  renounceOwnership(
+    overrides?: Overrides & { from?: string | Promise<string> }
+  ): Promise<ContractTransaction>;
+
+  setCards(
+    _cards: string,
+    overrides?: Overrides & { from?: string | Promise<string> }
+  ): Promise<ContractTransaction>;
+
+  setToken(
+    _token: string,
+    overrides?: Overrides & { from?: string | Promise<string> }
+  ): Promise<ContractTransaction>;
+
+  token(overrides?: CallOverrides): Promise<string>;
+
+  transferOwnership(
+    newOwner: string,
+    overrides?: Overrides & { from?: string | Promise<string> }
+  ): Promise<ContractTransaction>;
+
+  validate(
+    ids: [BigNumberish, BigNumberish, BigNumberish],
+    overrides?: CallOverrides
+  ): Promise<void>;
+
   callStatic: {
-    battle(overrides?: CallOverrides): Promise<void>;
+    battle(
+      ids: [BigNumberish, BigNumberish, BigNumberish],
+      overrides?: CallOverrides
+    ): Promise<void>;
+
+    cards(overrides?: CallOverrides): Promise<string>;
+
+    owner(overrides?: CallOverrides): Promise<string>;
+
+    records(
+      arg0: string,
+      overrides?: CallOverrides
+    ): Promise<
+      [BigNumber, BigNumber, BigNumber] & {
+        wins: BigNumber;
+        losses: BigNumber;
+        draws: BigNumber;
+      }
+    >;
+
+    renounceOwnership(overrides?: CallOverrides): Promise<void>;
+
+    setCards(_cards: string, overrides?: CallOverrides): Promise<void>;
+
+    setToken(_token: string, overrides?: CallOverrides): Promise<void>;
+
+    token(overrides?: CallOverrides): Promise<string>;
+
+    transferOwnership(
+      newOwner: string,
+      overrides?: CallOverrides
+    ): Promise<void>;
+
+    validate(
+      ids: [BigNumberish, BigNumberish, BigNumberish],
+      overrides?: CallOverrides
+    ): Promise<void>;
   };
 
-  filters: {};
+  filters: {
+    "BattleResult(tuple[3],tuple[3],uint8)"(
+      playerDeck?: null,
+      enemyDeck?: null,
+      result?: null
+    ): TypedEventFilter<
+      [
+        [
+          [number, number, number] & {
+            attack: number;
+            health: number;
+            ability: number;
+          },
+          [number, number, number] & {
+            attack: number;
+            health: number;
+            ability: number;
+          },
+          [number, number, number] & {
+            attack: number;
+            health: number;
+            ability: number;
+          }
+        ],
+        [
+          [number, number, number] & {
+            attack: number;
+            health: number;
+            ability: number;
+          },
+          [number, number, number] & {
+            attack: number;
+            health: number;
+            ability: number;
+          },
+          [number, number, number] & {
+            attack: number;
+            health: number;
+            ability: number;
+          }
+        ],
+        number
+      ],
+      {
+        playerDeck: [
+          [number, number, number] & {
+            attack: number;
+            health: number;
+            ability: number;
+          },
+          [number, number, number] & {
+            attack: number;
+            health: number;
+            ability: number;
+          },
+          [number, number, number] & {
+            attack: number;
+            health: number;
+            ability: number;
+          }
+        ];
+        enemyDeck: [
+          [number, number, number] & {
+            attack: number;
+            health: number;
+            ability: number;
+          },
+          [number, number, number] & {
+            attack: number;
+            health: number;
+            ability: number;
+          },
+          [number, number, number] & {
+            attack: number;
+            health: number;
+            ability: number;
+          }
+        ];
+        result: number;
+      }
+    >;
+
+    BattleResult(
+      playerDeck?: null,
+      enemyDeck?: null,
+      result?: null
+    ): TypedEventFilter<
+      [
+        [
+          [number, number, number] & {
+            attack: number;
+            health: number;
+            ability: number;
+          },
+          [number, number, number] & {
+            attack: number;
+            health: number;
+            ability: number;
+          },
+          [number, number, number] & {
+            attack: number;
+            health: number;
+            ability: number;
+          }
+        ],
+        [
+          [number, number, number] & {
+            attack: number;
+            health: number;
+            ability: number;
+          },
+          [number, number, number] & {
+            attack: number;
+            health: number;
+            ability: number;
+          },
+          [number, number, number] & {
+            attack: number;
+            health: number;
+            ability: number;
+          }
+        ],
+        number
+      ],
+      {
+        playerDeck: [
+          [number, number, number] & {
+            attack: number;
+            health: number;
+            ability: number;
+          },
+          [number, number, number] & {
+            attack: number;
+            health: number;
+            ability: number;
+          },
+          [number, number, number] & {
+            attack: number;
+            health: number;
+            ability: number;
+          }
+        ];
+        enemyDeck: [
+          [number, number, number] & {
+            attack: number;
+            health: number;
+            ability: number;
+          },
+          [number, number, number] & {
+            attack: number;
+            health: number;
+            ability: number;
+          },
+          [number, number, number] & {
+            attack: number;
+            health: number;
+            ability: number;
+          }
+        ];
+        result: number;
+      }
+    >;
+
+    "OwnershipTransferred(address,address)"(
+      previousOwner?: string | null,
+      newOwner?: string | null
+    ): TypedEventFilter<
+      [string, string],
+      { previousOwner: string; newOwner: string }
+    >;
+
+    OwnershipTransferred(
+      previousOwner?: string | null,
+      newOwner?: string | null
+    ): TypedEventFilter<
+      [string, string],
+      { previousOwner: string; newOwner: string }
+    >;
+  };
 
   estimateGas: {
     battle(
+      ids: [BigNumberish, BigNumberish, BigNumberish],
       overrides?: Overrides & { from?: string | Promise<string> }
+    ): Promise<BigNumber>;
+
+    cards(overrides?: CallOverrides): Promise<BigNumber>;
+
+    owner(overrides?: CallOverrides): Promise<BigNumber>;
+
+    records(arg0: string, overrides?: CallOverrides): Promise<BigNumber>;
+
+    renounceOwnership(
+      overrides?: Overrides & { from?: string | Promise<string> }
+    ): Promise<BigNumber>;
+
+    setCards(
+      _cards: string,
+      overrides?: Overrides & { from?: string | Promise<string> }
+    ): Promise<BigNumber>;
+
+    setToken(
+      _token: string,
+      overrides?: Overrides & { from?: string | Promise<string> }
+    ): Promise<BigNumber>;
+
+    token(overrides?: CallOverrides): Promise<BigNumber>;
+
+    transferOwnership(
+      newOwner: string,
+      overrides?: Overrides & { from?: string | Promise<string> }
+    ): Promise<BigNumber>;
+
+    validate(
+      ids: [BigNumberish, BigNumberish, BigNumberish],
+      overrides?: CallOverrides
     ): Promise<BigNumber>;
   };
 
   populateTransaction: {
     battle(
+      ids: [BigNumberish, BigNumberish, BigNumberish],
       overrides?: Overrides & { from?: string | Promise<string> }
+    ): Promise<PopulatedTransaction>;
+
+    cards(overrides?: CallOverrides): Promise<PopulatedTransaction>;
+
+    owner(overrides?: CallOverrides): Promise<PopulatedTransaction>;
+
+    records(
+      arg0: string,
+      overrides?: CallOverrides
+    ): Promise<PopulatedTransaction>;
+
+    renounceOwnership(
+      overrides?: Overrides & { from?: string | Promise<string> }
+    ): Promise<PopulatedTransaction>;
+
+    setCards(
+      _cards: string,
+      overrides?: Overrides & { from?: string | Promise<string> }
+    ): Promise<PopulatedTransaction>;
+
+    setToken(
+      _token: string,
+      overrides?: Overrides & { from?: string | Promise<string> }
+    ): Promise<PopulatedTransaction>;
+
+    token(overrides?: CallOverrides): Promise<PopulatedTransaction>;
+
+    transferOwnership(
+      newOwner: string,
+      overrides?: Overrides & { from?: string | Promise<string> }
+    ): Promise<PopulatedTransaction>;
+
+    validate(
+      ids: [BigNumberish, BigNumberish, BigNumberish],
+      overrides?: CallOverrides
     ): Promise<PopulatedTransaction>;
   };
 }

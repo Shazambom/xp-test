@@ -3,16 +3,8 @@ pragma solidity ^0.8.20;
 
 import "@openzeppelin/contracts/token/ERC721/ERC721.sol";
 import "@openzeppelin/contracts/access/AccessControl.sol";
-import "@openzeppelin/contracts/access/Ownable.sol";
 
-interface IExPopulusCards is ERC721 {
-	function cardDetails(uint256 _id) external view returns (uint8, uint8, uint8);
-	function pickEnemyDeck() public view returns (uint256[] memory);
-	function checkAbility(uint256 alpha, uint256 beta) public view returns (bool);
-}
-
-
-contract ExPopulusCards is ERC721, AccessControl, Ownable, IExPopulusCards {
+contract ExPopulusCards is ERC721, AccessControl {
 	bytes32 public constant MINTER_ROLE = keccak256("MINTER_ROLE");
 
 	struct NftData {
@@ -24,7 +16,6 @@ contract ExPopulusCards is ERC721, AccessControl, Ownable, IExPopulusCards {
 	event Mint(
 		address to,
 		uint256 id,
-		uint256 amount,
 		NftData data
 	);
 
@@ -32,7 +23,7 @@ contract ExPopulusCards is ERC721, AccessControl, Ownable, IExPopulusCards {
 	uint256[] public abilityPriority;
 	uint256 maxAbility;
 
-	constructor() {
+	constructor() ERC721("ExPopulusCards", "EPC") AccessControl() {
 		grantRole(DEFAULT_ADMIN_ROLE, msg.sender);
 		grantRole(MINTER_ROLE, msg.sender);
 		maxAbility = 2;
@@ -68,7 +59,7 @@ contract ExPopulusCards is ERC721, AccessControl, Ownable, IExPopulusCards {
 			revert("Ability must be less than the max ability");
 		}
 		//add 1 to the priority because 0 is the null case
-		uint256 memory _priority = priority+1;
+		uint256 _priority = priority+1;
 		for (uint256 i = 0; i < abilityPriority.length; i++) {
 			//TODO: For now I don't like this, loops are notoriously bad in solidity
 			// I will live with it because it will work but there has got to be a better way.
@@ -82,17 +73,17 @@ contract ExPopulusCards is ERC721, AccessControl, Ownable, IExPopulusCards {
 
 	function cardDetails(uint256 _id) public view returns (uint8, uint8, uint8) {
 		if (_id >= nftData.length) {
-			return "";
+			return (0, 0, 0);
 		}
 		NftData memory card = nftData[_id];
 		return (card.attack, card.health, card.ability);
 	}
 
-	function pickEnemyDeck() public view returns (uint256[] memory) {
-		uint256[] memory enemyDeck = new uint256[](3);
+	function pickEnemyDeck() external view returns (uint256[3] memory) {
+		uint256[3] memory enemyDeck;
 		for (uint256 i = 0; i < 3; i++) {
 			//RNG should be replaced with a more secure method but this will do for now
-			enemyDeck[i] = (uint256(keccak256(abi.encodePacked(block.timestamp, block.difficulty, msg.sender, tx.origin))) % (nftData.length-1))+1;
+			enemyDeck[i] = (uint256(keccak256(abi.encodePacked(block.timestamp, block.prevrandao, msg.sender, tx.origin))) % (nftData.length-1))+1;
 		}
 		return enemyDeck;
 	}
@@ -101,8 +92,8 @@ contract ExPopulusCards is ERC721, AccessControl, Ownable, IExPopulusCards {
 		if (alpha >= abilityPriority.length || beta >= abilityPriority.length) {
 			revert("Ability must be within the range of the ability priority array");
 		}
-		uint256 memory alphaPriority = abilityPriority[alpha];
-		uint256 memory betaPriority = abilityPriority[beta];
+		uint256 alphaPriority = abilityPriority[alpha];
+		uint256 betaPriority = abilityPriority[beta];
 		if (alphaPriority == 0 || betaPriority == 0) {
 			revert("Ability must have a priority");
 		}
@@ -112,7 +103,7 @@ contract ExPopulusCards is ERC721, AccessControl, Ownable, IExPopulusCards {
 	function supportsInterface(bytes4 interfaceId)
 	public
 	view
-	override(ERC721, AccessControl, IERC165)
+	override(ERC721, AccessControl)
 	returns (bool)
 	{
 		return super.supportsInterface(interfaceId);
